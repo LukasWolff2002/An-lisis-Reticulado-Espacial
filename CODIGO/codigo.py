@@ -219,7 +219,7 @@ def visualizar_modo(mode_index, nodes, elements, eigenfrequencies, conexiones_pa
 # Realizar el análisis modal
 def realizar_analisis_modal(num_modes):
     eigenvalues = ops.eigen(num_modes)
-    eigenfrequencies = np.sqrt(np.abs(eigenvalues)) / (2 * np.pi)
+    eigenfrequencies = np.sqrt((eigenvalues)) / (2 * np.pi)
     print(f'Frecuencias naturales: {eigenfrequencies} Hz')
     return eigenfrequencies
 
