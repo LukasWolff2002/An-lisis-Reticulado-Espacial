@@ -2,7 +2,7 @@ import numpy as np
 import openseespy.opensees as ops
 import pyvista as pv
 import matplotlib.pyplot as plt
-from variables import E, A, gamma, num_capas, unidad, gamma_rigido, masa_total
+from variables import E, A, gamma, num_capas, unidad, gamma_rigido, masa_total, Area_panel
 
 #arch -x86_64 python3 /Users/lukaswolff/Desktop/24_20/METODOS_COMPUTACIONALES/Analisis-Reticulado-Espacial/CODIGO/codigo.py
 
@@ -312,7 +312,16 @@ def main():
 
     print('')
     masa_total_barras = calcular_masa_total_barras(elements, A, gamma)
+    masa_total_panel = num_capas * gamma_rigido * Area_panel
     print(f'Masa total de todas las barras: {masa_total_barras} kg')
+
+    print(f'Masa total de los paneles solares: {masa_total_panel} kg')
+
+    masa_total_estructura = masa_total_barras + masa_total_panel
+
+    porcentaje = (masa_total_estructura/masa_total_panel)*100
+
+    print(f'El porcentaje de masa es {porcentaje}%')
 
     #ops.printModel("-node")
 if __name__ == "__main__":

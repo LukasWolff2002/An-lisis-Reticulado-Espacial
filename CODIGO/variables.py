@@ -2,8 +2,8 @@ import numpy as np
 
 #Carbono
 E = 338e9 #GPa
-D1 = 0.150 #m
-D2 = 0.100 #m
+D1 = 0.0050 #m
+D2 = 0.00100 #m
 gamma = 1.91 #g/cm3
 gamma = gamma*1000 #kg/m3
 
@@ -15,7 +15,7 @@ A = np.pi*(D1**2-D2**2)/4 #Area de la seccion tubular
 
 #Para los paneles solares
 gamma_rigido = 1.1  # Densidad del panel solar
-Area = unidad*unidad
-masa_total = Area/gamma  # Masa de un panel solar
+Area_panel = unidad*unidad
+masa_total = Area_panel/gamma  # Masa de un panel solar
 
 print(A)
