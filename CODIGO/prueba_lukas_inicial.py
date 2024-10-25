@@ -4,6 +4,8 @@ import pyvista as pv
 import matplotlib.pyplot as plt
 from variables import E, A, gamma, num_capas, unidad, gamma_rigido, masa_total
 
+#arch -x86_64 python3 /Users/lukaswolff/Desktop/24_20/METODOS_COMPUTACIONALES/Analisis-Reticulado-Espacial/CODIGO/prueba_lukas_inicial.py
+
 # Configuración inicial
 def inicializar_modelo():
     ops.wipe()  # Limpiar cualquier modelo existente
@@ -35,8 +37,16 @@ def crear_elemento_truss(element_id, nodo_i, nodo_j, A, material_id, gamma):
 def conectar_nodos_cuadrado(node_tags, element_id, A, material_id, gamma, elements):
     for i in range(len(node_tags)):
         j = (i + 1) % len(node_tags)  # Cerrar el ciclo conectando el último con el primero
+        print(f'{i=}, {j=}')
         elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j], A, material_id, gamma))
         element_id += 1
+
+    #Ahora conecto una diagonal
+    print('')
+    print(i,j)
+    elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j]+1, A, material_id, gamma))
+    element_id += 1
+    print('')
     return element_id
 
 # Generar múltiples capas de nodos y conectarlos
