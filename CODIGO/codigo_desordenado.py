@@ -6,6 +6,8 @@ import pyvista as pv
 
 from variables import E, A, gamma, num_capas, unidad
 
+#Segun el profesor usar polidata para graficar el panel solar
+
 #arch -x86_64 python3 /Users/lukaswolff/Desktop/24_20/METODOS_COMPUTACIONALES/Analisis-Reticulado-Espacial/CODIGO/prueba_lukas_inicial.py
 
 #Creo las barras con una gamma rho y se aplica directo al modelo

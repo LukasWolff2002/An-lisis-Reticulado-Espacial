@@ -37,13 +37,28 @@ def crear_elemento_truss(element_id, nodo_i, nodo_j, A, material_id, gamma):
 def conectar_nodos_cuadrado(node_tags, element_id, A, material_id, gamma, elements):
     for i in range(len(node_tags)):
         j = (i + 1) % len(node_tags)  # Cerrar el ciclo conectando el último con el primero
-        print(f'{i=}, {j=}')
+        #print(f'{i=}, {j=}')
         elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j], A, material_id, gamma))
         element_id += 1
 
     #Ahora conecto una diagonal
-    elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j]+1, A, material_id, gamma))
-    element_id += 1
+    if node_tags[0] == 1:
+        #Estoy en el primer elemento
+        elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j]+1, A, material_id, gamma))
+        element_id += 1
+
+    elif node_tags[-1] == num_capas*4 + 4:
+        #Estoy en el ultimo elemento
+        elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j]+1, A, material_id, gamma))
+        element_id += 1
+
+    else:
+        #Agrego dos diagonales
+        elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j]+1, A, material_id, gamma))
+        element_id += 1
+
+        elements.append(crear_elemento_truss(element_id, node_tags[i]-1, node_tags[j], A, material_id, gamma))
+        element_id += 1
     return element_id
 
 # Generar múltiples capas de nodos y conectarlos
