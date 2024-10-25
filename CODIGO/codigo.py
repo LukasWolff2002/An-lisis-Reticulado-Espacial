@@ -4,7 +4,7 @@ import pyvista as pv
 import matplotlib.pyplot as plt
 from variables import E, A, gamma, num_capas, unidad, gamma_rigido, masa_total
 
-#arch -x86_64 python3 /Users/lukaswolff/Desktop/24_20/METODOS_COMPUTACIONALES/Analisis-Reticulado-Espacial/CODIGO/prueba_lukas_inicial.py
+#arch -x86_64 python3 /Users/lukaswolff/Desktop/24_20/METODOS_COMPUTACIONALES/Analisis-Reticulado-Espacial/CODIGO/codigo.py
 
 # Configuración inicial
 def inicializar_modelo():
@@ -42,11 +42,8 @@ def conectar_nodos_cuadrado(node_tags, element_id, A, material_id, gamma, elemen
         element_id += 1
 
     #Ahora conecto una diagonal
-    print('')
-    print(i,j)
     elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j]+1, A, material_id, gamma))
     element_id += 1
-    print('')
     return element_id
 
 # Generar múltiples capas de nodos y conectarlos
