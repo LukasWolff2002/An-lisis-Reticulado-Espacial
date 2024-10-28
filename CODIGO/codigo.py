@@ -214,7 +214,7 @@ def visualizar_modo(mode_index, nodes, elements, eigenfrequencies, conexiones_pa
     frequency = eigenfrequencies[mode_index - 1]
     plotter.add_text(f"Mode {mode_index}: Frequency = {frequency:.4f} Hz", position='upper_left', font_size=10, color='black')
     #plotter.add_legend()
-    #plotter.show()
+    plotter.show()
 
 # Realizar el análisis modal
 def realizar_analisis_modal(num_modes):
