@@ -40,7 +40,65 @@ def conectar_nodos_cuadrado(node_tags, element_id, A, material_id, gamma, elemen
     return element_id
 \end{lstlisting}
 
-Luego, se procedió a la obtención de las frecuencias y modos de vibración de la estructura, para lo cual se utilizó el comando \texttt{eigen} de OpenSeesPy. Con los datos obtenidos, se procedió a la visualización de los modos de vibración de la estructura, para lo cual se utilizó PyVista. 
+Así, los reticulados para 2, 4, 8 y 16 módulos se visualizan de la siguiente forma.
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/2.png}
+        \caption{Reticulado de 2 módulos.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/4.png}
+        \caption{Reticulado de 4 módulos.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/8.png}
+        \caption{Reticulado de 8 módulos.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/16.png}
+        \caption{Reticulado de 16 módulos.}
+    \end{minipage}
+\end{figure}
+
+Luego, se procedió a la obtención de las frecuencias y modos de vibración de la estructura, para lo cual se utilizó el comando \texttt{eigen} de OpenSeesPy. Con los datos obtenidos, se procedió a la visualización de los modos de vibración de la estructura, para lo cual se utilizó PyVista. A continuación, se muestran las estructuras con su deformación en el modo 1 de vibración, como ejemplo.
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/m1_2.png}
+        \caption{Reticulado de 2 y su modo 1.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/m1_4.png}
+        \caption{Reticulado de 4 y su modo 1.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/m1_8.png}
+        \caption{Reticulado de 8 y su modo 1.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/m1_16.png}
+        \caption{Reticulado de 16 y su modo 1.}
+    \end{minipage}
+\end{figure}
 
 Posteriormente, se procedió a calcular la relación de masa estructural con respecto a los paneles solares, para lo cual se utilizó la siguiente fórmula:
 
@@ -52,5 +110,9 @@ Finalmente, se fueron calibrando los diámetros internos y externos de los tubos
 
 
 \section{Resultados}
+
+\subsection{Análisis}
+
+
 
 \section{Conclusiones}

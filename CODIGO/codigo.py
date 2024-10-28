@@ -211,10 +211,10 @@ def visualizar_modo(mode_index, nodes, elements, eigenfrequencies, conexiones_pa
     visualizar_estructura_rigida(conexiones_paneles, plotter, color='gold')
 
     # Información de frecuencia
-    frequency = eigenfrequencies[mode_index - 1]
-    plotter.add_text(f"Mode {mode_index}: Frequency = {frequency:.4f} Hz", position='upper_left', font_size=10, color='black')
+    #frequency = eigenfrequencies[mode_index - 1]
+    #plotter.add_text(f"Mode {mode_index}: Frequency = {frequency:.4f} Hz", position='upper_left', font_size=10, color='black')
     #plotter.add_legend()
-    #plotter.show()
+    plotter.show()
 
 # Realizar el análisis modal
 def realizar_analisis_modal(num_modes):
@@ -307,7 +307,7 @@ def main():
     eigenfrequencies = realizar_analisis_modal(num_modes=10)
 
     # Visualizar modos de vibración
-    for i in range(1, 11):
+    for i in range(1,2):#CAMBIO
         visualizar_modo(i, np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()]), elements, eigenfrequencies, conexiones_paneles, scale=0.1)
 
     print('')
