@@ -214,7 +214,7 @@ def visualizar_modo(mode_index, nodes, elements, eigenfrequencies, conexiones_pa
     frequency = eigenfrequencies[mode_index - 1]
     plotter.add_text(f"Mode {mode_index}: Frequency = {frequency:.4f} Hz", position='upper_left', font_size=10, color='black')
     #plotter.add_legend()
-    plotter.show()
+    #plotter.show()
 
 # Realizar el análisis modal
 def realizar_analisis_modal(num_modes):
@@ -322,6 +322,8 @@ def main():
     porcentaje = (masa_total_barras/masa_total_panel)*100
 
     print(f'El porcentaje de masa es {porcentaje}%')
+
+    
 
     #ops.printModel("-node")
 if __name__ == "__main__":

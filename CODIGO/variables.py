@@ -18,6 +18,6 @@ A = np.pi*(D1**2-D2**2)/4 #Area de la seccion tubular
 #Para los paneles solares
 gamma_rigido = 1.1  # Densidad del panel solar
 Area_panel = unidad*unidad
-masa_total = Area_panel/gamma  # Masa de un panel solar
+masa_total = Area_panel*gamma_rigido  # Masa de un panel solar
 
 print(A)
