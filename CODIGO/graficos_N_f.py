@@ -36,8 +36,8 @@ for filename, data in tables.items():
     plt.plot(data["Frecuencia (Hz)"], data["A_30%"], label="$A_{30\\%}$", marker='o')
     
     # Etiquetas y título
-    plt.xlabel("Frecuencia (Hz)")
-    plt.ylabel("Amplitud")
+    plt.xlabel("Modo")
+    plt.ylabel("Frecuencia (Hz)")
     plt.title(filename.replace("_", " ").capitalize())
     plt.legend()
     
