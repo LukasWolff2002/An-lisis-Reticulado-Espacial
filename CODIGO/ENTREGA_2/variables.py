@@ -9,7 +9,7 @@ gamma = gamma*1000 #kg/m3
 
 unidad = 2.6 #metro
 
-num_capas = 10
+num_capas = 6
 
 A = np.pi*(D1**2-D2**2)/4 #Area de la seccion tubular
 

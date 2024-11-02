@@ -99,32 +99,32 @@ def generar_capas(nodes, num_capas, element_id, A, material_id, gamma, elements)
     return element_id
 
 # Agregar estructura rígida de 1m x 1m x 0.1m
-def agregar_estructura_rigida(nodos_conectados, A_rigido, gamma_rigido, element_id, elements, material_id):
+def agregar_estructura_flexible(nodos_conectados, A_flexible, gamma_flexible, element_id, elements, material_id_flexible):
     """
-    Agrega una estructura rígida de 1m x 1m x 0.1m conectada a ciertos nodos.
+    Agrega una estructura flexible conectada a ciertos nodos para evitar que influya en la rigidez global de la estructura.
     Parámetros:
-        - nodos_conectados: Lista de nodos a los que se conectará la estructura rígida.
-        - A_rigido: Área de la sección transversal de los elementos rígidos.
-        - gamma_rigido: Densidad del material rígido.
+        - nodos_conectados: Lista de nodos a los que se conectará la estructura flexible.
+        - A_flexible: Área de la sección transversal de los elementos flexibles.
+        - gamma_flexible: Densidad del material flexible.
         - element_id: ID inicial para los elementos.
         - elements: Lista donde se almacenan los elementos definidos.
-        - material_id: Identificador del material rígido ya definido.
+        - material_id_flexible: Identificador del material flexible ya definido.
     """
 
-    # Conectar los nodos con elementos rígidos
+    # Conectar los nodos con elementos flexibles
     for i in range(len(nodos_conectados)):
-        # Conectar cada nodo con el siguiente para formar el contorno rígido
-        j = (i + 1) % len(nodos_conectados)  # Cerrar el ciclo
-        #print(nodos_conectados[i], nodos_conectados[j])
+        j = (i + 1) % len(nodos_conectados)  # Cerrar el ciclo para crear el contorno
         elements.append(
-            crear_elemento_truss(element_id, nodos_conectados[i], nodos_conectados[j], A_rigido, material_id, gamma_rigido)
+            crear_elemento_truss(element_id, nodos_conectados[i], nodos_conectados[j], A_flexible, material_id_flexible, gamma_flexible)
         )
         element_id += 1
 
     return element_id
 
 
+
 def acumular_masa_paneles(conexiones_paneles, masa_total):
+    print(conexiones_paneles)
     """
     Acumula la masa total para cada nodo basado en la cantidad de paneles conectados.
     Parámetros:
@@ -213,11 +213,60 @@ def visualizar_modo(mode_index, nodes, elements, eigenfrequencies, conexiones_pa
     # Información de frecuencia
     #frequency = eigenfrequencies[mode_index - 1]
     #plotter.add_text(f"Mode {mode_index}: Frequency = {frequency:.4f} Hz", position='upper_left', font_size=10, color='black')
-    plotter.add_legend()
-    plotter.show()
+    #plotter.add_legend()
+    #plotter.show()
+
+# Graficar desplazamientos debido a la inercia en x, y, z, mostrando la estructura original y desplazada, incluyendo barras y paneles
+def graficar_desplazamientos_inercia(elements, conexiones_paneles):
+    # Crear plotters para cada dirección
+    plotter_x = pv.Plotter()
+    plotter_y = pv.Plotter()
+    plotter_z = pv.Plotter()
+
+    # Recuperar las coordenadas originales y desplazamientos nodales en cada dirección
+    nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
+    displacements_x = np.array([ops.nodeDisp(tag)[0] for tag in ops.getNodeTags()])  # Desplazamiento en x
+    displacements_y = np.array([ops.nodeDisp(tag)[1] for tag in ops.getNodeTags()])  # Desplazamiento en y
+    displacements_z = np.array([ops.nodeDisp(tag)[2] for tag in ops.getNodeTags()])  # Desplazamiento en z
+
+    # Crear la malla de la estructura original
+    truss = pv.PolyData(nodes)
+    truss.lines = np.hstack([[2, e[0] - 1, e[1] - 1] for e in elements])  # Crear conexiones para las barras
+
+    # Agregar la estructura original y desplazada en cada dirección
+    # Gráfico de desplazamiento en X
+    truss_x = truss.copy()
+    truss_x.points[:, 0] += displacements_x  # Aplicar desplazamiento en x
+    plotter_x.add_mesh(truss, color='blue', label="Estructura Original")  # Estructura original
+    plotter_x.add_mesh(truss_x, color='cyan', label="Estructura Desplazada en X")  # Estructura desplazada en X
+    visualizar_estructura_rigida(conexiones_paneles, plotter_x, color='gold')  # Agregar paneles
+    plotter_x.add_text("Desplazamiento por Inercia en X", position='upper_left', font_size=10)
+    plotter_x.show()
+
+    # Gráfico de desplazamiento en Y
+    truss_y = truss.copy()
+    truss_y.points[:, 1] += displacements_y  # Aplicar desplazamiento en y
+    plotter_y.add_mesh(truss, color='blue', label="Estructura Original")  # Estructura original
+    plotter_y.add_mesh(truss_y, color='green', label="Estructura Desplazada en Y")  # Estructura desplazada en Y
+    visualizar_estructura_rigida(conexiones_paneles, plotter_y, color='gold')  # Agregar paneles
+    plotter_y.add_text("Desplazamiento por Inercia en Y", position='upper_left', font_size=10)
+    plotter_y.show()
+
+    # Gráfico de desplazamiento en Z
+    truss_z = truss.copy()
+    truss_z.points[:, 2] += displacements_z  # Aplicar desplazamiento en z
+    plotter_z.add_mesh(truss, color='blue', label="Estructura Original")  # Estructura original
+    plotter_z.add_mesh(truss_z, color='red', label="Estructura Desplazada en Z")  # Estructura desplazada en Z
+    visualizar_estructura_rigida(conexiones_paneles, plotter_z, color='gold')  # Agregar paneles
+    plotter_z.add_text("Desplazamiento por Inercia en Z", position='upper_left', font_size=10)
+    plotter_z.show()
+
+
 
 # Realizar el análisis modal
 def realizar_analisis_modal(num_modes):
+    #Modicidar el tipo de analisis
+
     eigenvalues = ops.eigen(num_modes)
     eigenfrequencies = np.sqrt((eigenvalues)) / (2 * np.pi)
     print(f'Frecuencias naturales: {eigenfrequencies} Hz')
@@ -253,6 +302,28 @@ def calcular_masa_total_barras(elements, A, gamma):
 
     return masa_total
 
+def inercia ():
+    paternx = 1
+    paterny = 2
+    paternz = 3
+
+    ax = [0.1 * 9.81]  # Aceleración en x como lista
+    ay = [0.1 * 9.81]  # Aceleración en y como lista
+    az = [0.1 * 9.81]  # Aceleración en z como lista
+
+    dirx = 1
+    diry = 2
+    dirz = 3
+
+    ops.timeSeries('Constant', paternx, '-values', *ax)
+    ops.timeSeries('Constant', paterny, '-values', *ay)
+    ops.timeSeries('Constant', paternz, '-values', *az)
+
+    ops.pattern('UniformExcitation', paternx, dirx, '-accel', paternx)
+    ops.pattern('UniformExcitation', paterny, diry, '-accel', paterny)
+    ops.pattern('UniformExcitation', paternz, dirz, '-accel', paternz)
+
+
 
 # Configuración y ejecución del análisis
 def main():
@@ -276,7 +347,7 @@ def main():
     element_id = generar_capas(nodes, num_capas, element_id=element_id, A=A, material_id=1, gamma=gamma, elements=elements)
 
     # Definir material rígido solo una vez
-    E_rigido = 1e10  # Módulo de elasticidad alto para simular rigidez
+    E_rigido = 1e1  # Módulo de elasticidad alto para simular rigidez
     material_id_rigido = 999
     ops.uniaxialMaterial('Elastic', material_id_rigido, E_rigido)
 
@@ -293,9 +364,11 @@ def main():
         conexiones_paneles.append([j, j+1, j + 5, j+4])
         j += 4
 
+    #Conexiones paneles es una lista con nodos a los cuales se les conecta un panel
+
     # Crear paneles
     for nodos_conectados in conexiones_paneles:
-        element_id = agregar_estructura_rigida(nodos_conectados, A_rigido, gamma_rigido, element_id, elements, material_id_rigido)
+        element_id = agregar_estructura_flexible(nodos_conectados, A_rigido, gamma_rigido, element_id, elements, material_id_rigido)
 
     # Acumular masas en los nodos
     masa_acumulada_por_nodo = acumular_masa_paneles(conexiones_paneles, masa_total)
@@ -304,7 +377,22 @@ def main():
     asignar_masas_a_nodos(masa_acumulada_por_nodo)
 
     
-    visualizar_modo(i, np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()]), elements, 0, conexiones_paneles, scale=0.1)
+
+    #visualizar_modo(i, np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()]), elements, 0, conexiones_paneles, scale=0.1)
+
+    inercia()
+
+    ops.system("BandGen")
+    ops.numberer("Plain")
+    ops.constraints("Plain")
+    ops.integrator("Newmark", 0.5, 0.25)
+    ops.analysis("Transient")
+    ops.analyze(100, 0.01)
+
+    graficar_desplazamientos_inercia(elements, conexiones_paneles)
+
+
+
     """
     # Realizar análisis modal
     eigenfrequencies = realizar_analisis_modal(num_modes=10)
@@ -326,7 +414,8 @@ def main():
 
     print(f'El porcentaje de masa es {porcentaje}%')
 
-    #ops.printModel("-node")
+    ops.printModel("-node")
     """
+    #ops.printModel("-node")
 if __name__ == "__main__":
     main()
