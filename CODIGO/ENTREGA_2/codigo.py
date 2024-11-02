@@ -242,6 +242,7 @@ def graficar_desplazamientos_inercia(elements, conexiones_paneles):
     plotter_x.add_mesh(truss_x, color='cyan', label="Estructura Desplazada en X")  # Estructura desplazada en X
     visualizar_estructura_rigida(conexiones_paneles, plotter_x, color='gold')  # Agregar paneles
     plotter_x.add_text("Desplazamiento por Inercia en X", position='upper_left', font_size=10)
+    plotter_x.show_axes()  # Mostrar ejes
     plotter_x.show()
 
     # Gráfico de desplazamiento en Y
@@ -251,6 +252,7 @@ def graficar_desplazamientos_inercia(elements, conexiones_paneles):
     plotter_y.add_mesh(truss_y, color='green', label="Estructura Desplazada en Y")  # Estructura desplazada en Y
     visualizar_estructura_rigida(conexiones_paneles, plotter_y, color='gold')  # Agregar paneles
     plotter_y.add_text("Desplazamiento por Inercia en Y", position='upper_left', font_size=10)
+    plotter_y.show_axes()  # Mostrar ejes
     plotter_y.show()
 
     # Gráfico de desplazamiento en Z
@@ -260,6 +262,7 @@ def graficar_desplazamientos_inercia(elements, conexiones_paneles):
     plotter_z.add_mesh(truss_z, color='red', label="Estructura Desplazada en Z")  # Estructura desplazada en Z
     visualizar_estructura_rigida(conexiones_paneles, plotter_z, color='gold')  # Agregar paneles
     plotter_z.add_text("Desplazamiento por Inercia en Z", position='upper_left', font_size=10)
+    plotter_z.show_axes()  # Mostrar ejes
     plotter_z.show()
 
 
@@ -365,12 +368,48 @@ def variacion_termica(nodos_paneles, elements):
                 ops.remove('element', tag_barra)  # Eliminar el elemento original
                 # Crear el elemento con el nuevo material de deformación térmica
                 ops.element('Truss', tag_barra, nodo_i, nodo_j, A, 2, '-rho', gamma)
+                #ops.element('Truss', element_id, nodo_i, nodo_j, A, material_id, '-rho', gamma)
                 #print(f"Barra {tag_barra} entre nodos {nodo_i} y {nodo_j} actualizada con material térmico.")
-            
 
-    
+                ops.setParameter('-val', termalStrain, '-ele', tag_barra)  # Ajusta el parámetro de deformación
+                print(f"Material `InitStrainMaterial` con deformación térmica aplicada a la barra {tag_barra}")
 
+def graficar_desplazamientos_termicos(elements, nodos_paneles, escala=1.0):
+    """
+    Grafica las deformaciones térmicas en la estructura, mostrando la estructura
+    original y desplazada debido a la expansión térmica.
+    """
+    plotter = pv.Plotter()
 
+    # Obtener las coordenadas originales de los nodos
+    nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
+
+    # Calcular los desplazamientos nodales debido a la deformación térmica
+    deformaciones_x = np.array([ops.nodeDisp(tag)[0] for tag in ops.getNodeTags()])
+    deformaciones_y = np.array([ops.nodeDisp(tag)[1] for tag in ops.getNodeTags()])
+    deformaciones_z = np.array([ops.nodeDisp(tag)[2] for tag in ops.getNodeTags()])
+
+    # Crear la malla de la estructura original
+    truss = pv.PolyData(nodes)
+    truss.lines = np.hstack([[2, e[0] - 1, e[1] - 1] for e in elements])  # Crear conexiones para las barras
+
+    # Crear la estructura desplazada debido a la expansión térmica
+    truss_desplazado = truss.copy()
+    truss_desplazado.points[:, 0] += deformaciones_x * escala
+    truss_desplazado.points[:, 1] += deformaciones_y * escala
+    truss_desplazado.points[:, 2] += deformaciones_z * escala
+
+    # Agregar la estructura original y desplazada al gráfico
+    plotter.add_mesh(truss, color='blue', label="Estructura Original")  # Estructura original
+    plotter.add_mesh(truss_desplazado, color='orange', label="Estructura Desplazada Térmicamente")  # Estructura desplazada
+
+    # Agregar paneles
+    visualizar_estructura_rigida(nodos_paneles, plotter, color='gold')  # Añadir paneles como superficies
+
+    # Configurar el gráfico
+    plotter.add_text("Desplazamiento Térmico", position='upper_left', font_size=10)
+    plotter.show_axes()  # Mostrar ejes
+    plotter.show()
 
 
 # Configuración y ejecución del análisis
@@ -437,9 +476,13 @@ def main():
     ops.analysis("Transient")
     ops.analyze(100, 0.01)
 
-    graficar_desplazamientos_inercia(elements, conexiones_paneles)
+    #graficar_desplazamientos_inercia(elements, conexiones_paneles)
 
     variacion_termica(conexiones_paneles, elements)
+
+    graficar_desplazamientos_termicos(elements, conexiones_paneles)
+
+    
 
 
 
