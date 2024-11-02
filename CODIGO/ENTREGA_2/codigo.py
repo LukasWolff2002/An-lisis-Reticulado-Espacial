@@ -2,7 +2,7 @@ import numpy as np
 import openseespy.opensees as ops
 import pyvista as pv
 import matplotlib.pyplot as plt
-from variables import E, A, gamma, num_capas, unidad, gamma_rigido, masa_total, Area_panel
+from variables import E, A, gamma, num_capas, unidad, gamma_rigido, masa_total, Area_panel, alpha, deltaT, barras_centrales
 
 #arch -x86_64 python3 /Users/lukaswolff/Desktop/24_20/METODOS_COMPUTACIONALES/Analisis-Reticulado-Espacial/CODIGO/ENTREGA_2/codigo.py
 
@@ -57,8 +57,10 @@ def conectar_nodos_cuadrado(node_tags, element_id, A, material_id, gamma, elemen
         elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j]+1, A, material_id, gamma))
         element_id += 1
 
-        elements.append(crear_elemento_truss(element_id, node_tags[i]-1, node_tags[j], A, material_id, gamma))
-        element_id += 1
+        if barras_centrales:
+            elements.append(crear_elemento_truss(element_id, node_tags[i]-1, node_tags[j], A, material_id, gamma))
+            element_id += 1
+
     return element_id
 
 # Generar múltiples capas de nodos y conectarlos
@@ -124,7 +126,6 @@ def agregar_estructura_flexible(nodos_conectados, A_flexible, gamma_flexible, el
 
 
 def acumular_masa_paneles(conexiones_paneles, masa_total):
-    print(conexiones_paneles)
     """
     Acumula la masa total para cada nodo basado en la cantidad de paneles conectados.
     Parámetros:
@@ -323,6 +324,53 @@ def inercia ():
     ops.pattern('UniformExcitation', paterny, diry, '-accel', paterny)
     ops.pattern('UniformExcitation', paternz, dirz, '-accel', paternz)
 
+def encontrar_barra(nodo_i, nodo_j, elements):
+    """
+    Encuentra el número de la barra que conecta dos nodos específicos.
+    Parámetros:
+        - nodo_i: ID del primer nodo.
+        - nodo_j: ID del segundo nodo.
+        - elements: Lista de elementos, donde cada elemento es una tupla (element_id, nodo_i, nodo_j).
+    Retorna:
+        - El número de la barra que conecta los nodos, o None si no existe.
+    """
+    for index, (ni, nj) in enumerate(elements):
+        # Comprobar si el elemento conecta los nodos, independientemente del orden
+        if (ni == nodo_i and nj == nodo_j) or (ni == nodo_j and nj == nodo_i):
+            return index + 1  # Devolver el número de barra (basado en índice + 1)
+    return None  # Devolver None si no se encuentra la barra
+
+
+def variacion_termica(nodos_paneles, elements):
+    """
+    Modifica el material de las barras asociadas a nodos en `nodos_paneles` 
+    para aplicar un material con deformación térmica.
+    """
+    #print("Nodos en paneles:", nodos_paneles)
+
+    # Coeficiente de expansión térmica
+    termalStrain = alpha * deltaT  # Calcular deformación térmica
+    # Crear el nuevo material con deformación térmica
+    ops.uniaxialMaterial('InitStrainMaterial', 2, 1, termalStrain)
+
+    # Modificar las barras conectadas a los nodos de los paneles
+    for listas in nodos_paneles:
+        for i in range(len(listas)):
+            # Encontrar la barra entre el nodo actual y el siguiente
+            nodo_i, nodo_j = listas[i], listas[(i + 1) % len(listas)]
+            tag_barra = encontrar_barra(nodo_i, nodo_j, elements)
+            
+            # Si encontramos la barra, la eliminamos y reconstruimos con el nuevo material
+            if tag_barra is not None:
+                ops.remove('element', tag_barra)  # Eliminar el elemento original
+                # Crear el elemento con el nuevo material de deformación térmica
+                ops.element('Truss', tag_barra, nodo_i, nodo_j, A, 2, '-rho', gamma)
+                #print(f"Barra {tag_barra} entre nodos {nodo_i} y {nodo_j} actualizada con material térmico.")
+            
+
+    
+
+
 
 
 # Configuración y ejecución del análisis
@@ -390,6 +438,8 @@ def main():
     ops.analyze(100, 0.01)
 
     graficar_desplazamientos_inercia(elements, conexiones_paneles)
+
+    variacion_termica(conexiones_paneles, elements)
 
 
 

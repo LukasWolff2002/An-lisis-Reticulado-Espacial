@@ -9,7 +9,7 @@ gamma = gamma*1000 #kg/m3
 
 unidad = 2.6 #metro
 
-num_capas = 6
+num_capas = 20
 
 A = np.pi*(D1**2-D2**2)/4 #Area de la seccion tubular
 
@@ -18,4 +18,9 @@ gamma_rigido = 1.1  # Densidad del panel solar
 Area_panel = unidad*unidad
 masa_total = Area_panel/gamma  # Masa de un panel solar
 
-print(A)
+#Para el analisi termico
+alpha = 1
+deltaT = 100
+
+#Variable para agregar barras centrales
+barras_centrales = True
