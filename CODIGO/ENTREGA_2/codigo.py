@@ -115,10 +115,12 @@ def inercia ():
     ops.pattern('UniformExcitation', paterny, diry, '-accel', paterny)
     ops.pattern('UniformExcitation', paternz, dirz, '-accel', paternz)
 
-# --- Asignación de Masa ---
-def acumular_masa_paneles(conexiones_paneles, masa_total):
+# --- Asignación de Masa de Paneles ---
+def acumular_masa_paneles(conexiones_paneles, masa_total, masa_acumulada_por_nodo):
+    """
+    Agrega la masa de los paneles a los nodos específicos que están conectados a los paneles.
+    """
     masa_por_panel = masa_total / 4
-    masa_acumulada_por_nodo = {}
 
     for nodos_conectados in conexiones_paneles:
         for nodo in nodos_conectados:
@@ -126,9 +128,39 @@ def acumular_masa_paneles(conexiones_paneles, masa_total):
 
     return masa_acumulada_por_nodo
 
+# Para asignar la masa acumulada a los nodos
 def asignar_masas_a_nodos(masa_acumulada_por_nodo):
     for nodo, masa in masa_acumulada_por_nodo.items():
+        print(f"Nodo {nodo} - Masa asignada: {masa}")
         ops.mass(nodo, masa, masa, masa)
+
+# --- Acumulación de Masa de Barras en Nodos ---
+def acumular_masa_barras_en_nodos(elements, A, gamma):
+    """
+    Calcula la masa de cada barra y la distribuye entre los nodos de sus extremos.
+    Retorna un diccionario con la masa acumulada por cada nodo.
+    """
+    masa_acumulada_por_nodo = {}
+
+    for element in elements:
+        nodo_i, nodo_j = element
+        
+        # Obtener las coordenadas de los nodos
+        coord_i = np.array(ops.nodeCoord(nodo_i))
+        coord_j = np.array(ops.nodeCoord(nodo_j))
+        
+        # Calcular la longitud de la barra
+        longitud = np.linalg.norm(coord_j - coord_i)
+        
+        # Calcular la masa de la barra
+        masa_barra = longitud * A * gamma
+        
+        # Distribuir la mitad de la masa a cada nodo
+        masa_acumulada_por_nodo[nodo_i] = masa_acumulada_por_nodo.get(nodo_i, 0) + masa_barra / 2
+        masa_acumulada_por_nodo[nodo_j] = masa_acumulada_por_nodo.get(nodo_j, 0) + masa_barra / 2
+
+    return masa_acumulada_por_nodo
+
 
 # --- Visualización de la Estructura ---
 def visualizar_estructura_rigida(nodos_paneles, plotter, color='green'):
@@ -146,6 +178,10 @@ def graficar_desplazamientos_inercia(elements, conexiones_paneles):
         np.array([ops.nodeDisp(tag)[i] for tag in ops.getNodeTags()]) for i in range(3)
     ]
 
+    print("Desplazamientos en X:", displacements[0])
+    print("Desplazamientos en Y:", displacements[1])
+    print("Desplazamientos en Z:", displacements[2])
+
     colors = ['cyan', 'green', 'red']
     labels = ['X', 'Y', 'Z']
     for i, plotter in enumerate(plotters):
@@ -160,6 +196,23 @@ def graficar_desplazamientos_inercia(elements, conexiones_paneles):
         plotter.add_text(f"Desplazamiento por Inercia en {labels[i]}", position='upper_left', font_size=10)
         plotter.show_axes()
         plotter.show()
+
+    '''
+    # Gráfico combinado de desplazamientos en X, Y y Z
+    plotter_combined = plotters[3]
+    truss = pv.PolyData(nodes)
+    truss.lines = np.hstack([[2, e[0] - 1, e[1] - 1] for e in elements])
+
+    truss_displaced_combined = truss.copy()
+    truss_displaced_combined.points += np.column_stack(displacements)  # Aplicar desplazamientos en todas las direcciones
+
+    plotter_combined.add_mesh(truss, color='blue', label="Estructura Original")
+    plotter_combined.add_mesh(truss_displaced_combined, color=colors[3], label="Estructura Desplazada Combinada")
+    visualizar_estructura_rigida(conexiones_paneles, plotter_combined, color='gold')
+    plotter_combined.add_text("Desplazamiento por Inercia Combinado", position='upper_left', font_size=10)
+    plotter_combined.show_axes()
+    plotter_combined.show()
+    '''
 
 def calcular_masa_total_barras(elements, A, gamma):
     masa_total = 0
@@ -234,7 +287,8 @@ def main():
     element_id = conectar_nodos_cuadrado(ops.getNodeTags(), element_id, A, 1, gamma, elements)
     element_id = generar_capas(nodes, num_capas, element_id=element_id, A=A, material_id=1, gamma=gamma, elements=elements)
 
-    E_rigido, material_id_rigido, A_rigido = 1e1, 999, 0.01
+    
+    E_rigido, material_id_rigido, A_rigido = 1e-1000, 999, 0.01
     ops.uniaxialMaterial('Elastic', material_id_rigido, E_rigido)
 
     conexiones_paneles = []
@@ -243,8 +297,17 @@ def main():
     for nodos_conectados in conexiones_paneles:
         element_id = agregar_estructura_flexible(nodos_conectados, A_rigido, gamma_rigido, element_id, elements, material_id_rigido)
 
-    masa_acumulada_por_nodo = acumular_masa_paneles(conexiones_paneles, masa_total)
+    # Acumular masas de las barras en cada nodo
+    masa_acumulada_por_nodo = acumular_masa_barras_en_nodos(elements, A, gamma)
+    
+    # Agregar la masa de los paneles a los nodos específicos conectados a los paneles
+    masa_acumulada_por_nodo = acumular_masa_paneles(conexiones_paneles, masa_total, masa_acumulada_por_nodo)
+    
+    # Asignar las masas calculadas a los nodos
     asignar_masas_a_nodos(masa_acumulada_por_nodo)
+
+    #ops.printModel('node')
+
     inercia()
 
     ops.system("BandGen")
@@ -258,6 +321,8 @@ def main():
 
     variacion_termica(conexiones_paneles, elements)
     graficar_desplazamientos_termicos(elements, conexiones_paneles)
+
+
 
 if __name__ == "__main__":
     main()
