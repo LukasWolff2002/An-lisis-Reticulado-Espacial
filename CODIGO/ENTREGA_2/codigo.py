@@ -111,9 +111,27 @@ def inercia ():
     ops.timeSeries('Constant', paterny, '-values', *ay)
     ops.timeSeries('Constant', paternz, '-values', *az)
 
+    #Esto baja los desplazamiento pero no genera un cambio
+    #ops.timeSeries('Linear', paternx, '-factor', ax[0])
+    #ops.timeSeries('Linear', paterny, '-factor', ay[0])
+    #ops.timeSeries('Linear', paternz, '-factor', az[0])
+
     ops.pattern('UniformExcitation', paternx, dirx, '-accel', paternx)
     ops.pattern('UniformExcitation', paterny, diry, '-accel', paterny)
     ops.pattern('UniformExcitation', paternz, dirz, '-accel', paternz)
+
+def aplicar_cargas_inerciales(masa_acumulada_por_nodo):
+    acceleration_x = 0.1 * 9.81  # Aceleración en X (m/s²)
+    acceleration_y = 0.1 * 9.81  # Aceleración en Y (m/s²)
+    acceleration_z = 0.1 * 9.81  # Aceleración en Z (m/s²)
+
+    ops.timeSeries('Constant', 1)
+    ops.pattern('Plain', 1, 1)
+    for nodo, masa in masa_acumulada_por_nodo.items():
+        F_inertial_x = -masa * acceleration_x  # Fuerza inercial en X
+        F_inertial_y = -masa * acceleration_y  # Fuerza inercial en Y
+        F_inertial_z = -masa * acceleration_z  # Fuerza inercial en Z
+        ops.load(nodo, F_inertial_x, F_inertial_y, F_inertial_z)
 
 # --- Asignación de Masa de Paneles ---
 def acumular_masa_paneles(conexiones_paneles, masa_total, masa_acumulada_por_nodo):
@@ -172,6 +190,7 @@ def visualizar_estructura_rigida(nodos_paneles, plotter, color='green'):
 
 # --- Graficar Desplazamientos Inerciales ---
 def graficar_desplazamientos_inercia(elements, conexiones_paneles):
+    escala=10
     plotters = [pv.Plotter() for _ in range(3)]
     nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
     displacements = [
@@ -189,30 +208,15 @@ def graficar_desplazamientos_inercia(elements, conexiones_paneles):
         truss.lines = np.hstack([[2, e[0] - 1, e[1] - 1] for e in elements])
 
         truss_displaced = truss.copy()
-        truss_displaced.points[:, i] += displacements[i]
+        # Aplicar el factor de escala a los desplazamientos
+        truss_displaced.points[:, i] += displacements[i] * escala
         plotter.add_mesh(truss, color='blue', label="Estructura Original")
         plotter.add_mesh(truss_displaced, color=colors[i], label=f"Estructura Desplazada en {labels[i]}")
         visualizar_estructura_rigida(conexiones_paneles, plotter, color='gold')
-        plotter.add_text(f"Desplazamiento por Inercia en {labels[i]}", position='upper_left', font_size=10)
+        plotter.add_text(f"Desplazamiento por Inercia en {labels[i]} (Escala: {escala})", position='upper_left', font_size=10)
         plotter.show_axes()
         plotter.show()
 
-    '''
-    # Gráfico combinado de desplazamientos en X, Y y Z
-    plotter_combined = plotters[3]
-    truss = pv.PolyData(nodes)
-    truss.lines = np.hstack([[2, e[0] - 1, e[1] - 1] for e in elements])
-
-    truss_displaced_combined = truss.copy()
-    truss_displaced_combined.points += np.column_stack(displacements)  # Aplicar desplazamientos en todas las direcciones
-
-    plotter_combined.add_mesh(truss, color='blue', label="Estructura Original")
-    plotter_combined.add_mesh(truss_displaced_combined, color=colors[3], label="Estructura Desplazada Combinada")
-    visualizar_estructura_rigida(conexiones_paneles, plotter_combined, color='gold')
-    plotter_combined.add_text("Desplazamiento por Inercia Combinado", position='upper_left', font_size=10)
-    plotter_combined.show_axes()
-    plotter_combined.show()
-    '''
 
 def calcular_masa_total_barras(elements, A, gamma):
     masa_total = 0
@@ -288,8 +292,8 @@ def main():
     element_id = generar_capas(nodes, num_capas, element_id=element_id, A=A, material_id=1, gamma=gamma, elements=elements)
 
     
-    E_rigido, material_id_rigido, A_rigido = 1e-1000, 999, 0.01
-    ops.uniaxialMaterial('Elastic', material_id_rigido, E_rigido)
+    E_Panel_Solar, material_id_rigido, A_rigido = 1e-1000, 999, 0.01
+    ops.uniaxialMaterial('Elastic', material_id_rigido, E_Panel_Solar)
 
     conexiones_paneles = []
     for i in range(num_capas):
@@ -306,21 +310,44 @@ def main():
     # Asignar las masas calculadas a los nodos
     asignar_masas_a_nodos(masa_acumulada_por_nodo)
 
+    # Aplicar las cargas inerciales
+    #En vez de correr una funcion inercia, aplico una aceleracion a cada nodo segjun su masa, lo que resulta en una fuerza
+    aplicar_cargas_inerciales(masa_acumulada_por_nodo)
+
     #ops.printModel('node')
 
-    inercia()
+    #inercia()
 
+    '''
     ops.system("BandGen")
-    ops.numberer("Plain")
+    ops.numberer('RCM')
     ops.constraints("Plain")
     ops.integrator("Newmark", 0.5, 0.25)
     ops.analysis("Transient")
     ops.analyze(100, 0.01)
+  
+    '''
+
+    # Configuración del análisis estático
+    ops.system('BandSPD')
+    ops.numberer('RCM')
+    ops.constraints('Plain')
+    ops.integrator('LoadControl', 1.0)
+    ops.algorithm('Linear')
+    ops.analysis('Static')
+    ops.analyze(1)
+    
+
+    
 
     graficar_desplazamientos_inercia(elements, conexiones_paneles)
 
     variacion_termica(conexiones_paneles, elements)
-    graficar_desplazamientos_termicos(elements, conexiones_paneles)
+    #graficar_desplazamientos_termicos(elements, conexiones_paneles)
+
+    #ops.printModel()
+
+    
 
 
 

@@ -23,4 +23,4 @@ alpha = -1.1e-6 #Coeficiente de dilatacion termica
 deltaT = 100
 
 #Variable para agregar barras centrales
-barras_centrales = True
+barras_centrales = False
