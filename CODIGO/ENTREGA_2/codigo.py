@@ -129,10 +129,8 @@ def acumular_masa_barras_en_nodos(elements, A, gamma):
                 # Calcular la masa de la barra
                 coord_i = np.array(ops.nodeCoord(nodo_i))
                 coord_j = np.array(ops.nodeCoord(nodo_j))
-                print(nodo_i, nodo_j)
                 longitud = np.linalg.norm(coord_j - coord_i)
                 masa_barra = longitud * A * gamma
-                print(longitud, masa_barra)
                 # Agregar la mitad de la masa de la barra al nodo
                 masa_nodo += masa_barra / 2
         # Almacenar la masa acumulada en el nodo
@@ -142,13 +140,12 @@ def acumular_masa_barras_en_nodos(elements, A, gamma):
 
 def acumular_masa_paneles(conexiones_paneles, masa_total, masa_acumulada_por_nodo):
     num_paneles = len(conexiones_paneles)
-    print('la masa total es: ', masa_total)
     masa_por_panel = masa_total / 4
 
     nodos_paneles = []
     for nodos_conectados in conexiones_paneles:
         for nodo in nodos_conectados:
-            print(f"Nodo {nodo} - Masa asignada (Barras): {masa_acumulada_por_nodo.get(nodo, 0)}")
+            #print(f"Nodo {nodo} - Masa asignada (Barras): {masa_acumulada_por_nodo.get(nodo, 0)}")
             masa_acumulada_por_nodo[nodo] = masa_acumulada_por_nodo.get(nodo, 0) + masa_por_panel
             nodos_paneles.append(nodo)
 
@@ -323,17 +320,18 @@ def variacion_termica(conexiones_paneles, elements, solucion):
 
 def obtener_reacciones_en_apoyos(nodos_soporte):
     print("\nReacciones en los apoyos:")
+    ops.reactions()
     for nodo in nodos_soporte:
         reacciones = ops.nodeReaction(nodo)
         print(f"Nodo {nodo}: Reacción Rx = {reacciones[0]:.2f}, Ry = {reacciones[1]:.2f}, Rz = {reacciones[2]:.2f}")
 
 def optimizador_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles, solucion):
     # Las aceleraciones que se estan aplicando al analisis son:
-    acceleration_x = 1 * 9.81  # Aceleración en X (m/s²)
+    acceleration_x = 0.1 * 9.81  # Aceleración en X (m/s²)
     acceleration_y = 0.1 * 9.81  # Aceleración en Y (m/s²)
     acceleration_z = 0.1 * 9.81  # Aceleración en Z (m/s²)
 
-    fuerzas_barras = []
+    fuerzas_barras = {}
 
     aceleraciones = [[acceleration_x,0,0],[0, acceleration_y, 0],[0,0, acceleration_z]]
 
@@ -353,13 +351,14 @@ def optimizador_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles,
         #graficar_desplazamientos_inercia(elements, conexiones_paneles, escala=50)
 
         #Esta funcion grafica los desplazamientos en las tres direcciones combinados
-        #graficar_desplazamientos_combinados_inercia(elements, conexiones_paneles, escala=100, titulo="Desplazamiento Inercial")
+        graficar_desplazamientos_combinados_inercia(elements, conexiones_paneles, escala=100, titulo="Desplazamiento Inercial")
 
         # Obtener reacciones en los apoyos
         nodos_soporte = [1, 2, 3, 4]  # Asegúrate de que esta lista contenga los nodos correctos
         obtener_reacciones_en_apoyos(nodos_soporte)
 
         print("Fuerzas internas en cada barra:")
+        
         for element in elements:
             element_id, nodo_i, nodo_j = element
             # Obtener la fuerza interna en el elemento
@@ -367,16 +366,26 @@ def optimizador_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles,
             fuerzas = ops.eleForce(element_id)
             # La fuerza axial es igual en magnitud y opuesta en dirección en ambos nodos
             fuerza_axial = fuerzas[0]  # Tomamos la fuerza en el nodo i
-            #print(f"Elemento {element_id} entre nodos {nodo_i}-{nodo_j}: Fuerza axial = {fuerza_axial}")
-
+            if element_id not in fuerzas_barras:
+                fuerzas_barras[element_id] = fuerza_axial**2
+            else:
+                fuerzas_barras[element_id] += fuerza_axial**2
+            
+        
         # Resetear el estado del modelo antes del análisis térmico o para el siguiente analisis inercial
-        ops.remove('loadPattern', 1)  # Si el patrón de carga inercial tiene tag 1
-        ops.remove('loadPattern', 2)  # Si el patrón de carga inercial tiene tag 2
-        ops.remove('loadPattern', 3)  # Si el patrón de carga inercial tiene tag 3
+        #ops.remove('loadPattern', 1)  # Si el patrón de carga inercial tiene tag 1
+        #ops.remove('loadPattern', 2)  # Si el patrón de carga inercial tiene tag 2
+        #ops.remove('loadPattern', 3)  # Si el patrón de carga inercial tiene tag 3
+        # Limpiar análisis anterior
+        ops.remove('loadPattern', solucion)
+        ops.wipeAnalysis()
 
         solucion += 1
+    
+    for barras in fuerzas_barras:
+        fuerzas_barras[barras] = np.sqrt(fuerzas_barras[barras])
 
-    return solucion
+    return solucion, fuerzas_barras
 
 # --- Ejecución del Análisis ---
 def main():
@@ -412,7 +421,10 @@ def main():
     #Analisis Inercial
     #-----------------------------------------------------
     
-    solucion = optimizador_inercial(masa_acumulada_por_nodo, elements, conexiones_paneles, solucion)
+    solucion, fuerzas_barras = optimizador_inercial(masa_acumulada_por_nodo, elements, conexiones_paneles, solucion)
+
+    
+    print('\nLas fuerzas en las barras son\n',fuerzas_barras)
 
     #-----------------------------------------------------
     #Analisis Termico
@@ -431,8 +443,6 @@ def main():
     #ops.analyze(1)
 
     #graficar_desplazamientos_termicos(elements, conexiones_paneles, escala=100)
-
-    print(masa_acumulada_por_nodo)
 
     masa_estructura = 0
     for masas in masa_acumulada_por_nodo.values():
