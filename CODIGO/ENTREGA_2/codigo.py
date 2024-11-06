@@ -96,10 +96,7 @@ def agregar_estructura_flexible(nodos_conectados, A_flexible, gamma_flexible, el
     return element_id
 
 # --- Aplicación de Cargas Inerciales ---
-def aplicar_cargas_inerciales(masa_acumulada_por_nodo):
-    acceleration_x = 0.1 * 9.81  # Aceleración en X (m/s²)
-    acceleration_y = 0.1 * 9.81  # Aceleración en Y (m/s²)
-    acceleration_z = 0.1 * 9.81  # Aceleración en Z (m/s²)
+def aplicar_cargas_inerciales(masa_acumulada_por_nodo, acceleration_x, acceleration_y, acceleration_z):
 
     ops.timeSeries('Constant', 1)
     ops.pattern('Plain', 1, 1)
@@ -266,8 +263,12 @@ def main():
     masa_acumulada_por_nodo, nodos_paneles = acumular_masa_paneles(conexiones_paneles, masa_total, masa_acumulada_por_nodo)
     asignar_masas_a_nodos(masa_acumulada_por_nodo, nodos_paneles)
 
-    # Aplicar cargas inerciales y realizar análisis estático
-    aplicar_cargas_inerciales(masa_acumulada_por_nodo)
+    # Las aceleraciones que se estan aplicando al analisis son:
+    acceleration_x = 0.1 * 9.81  # Aceleración en X (m/s²)
+    acceleration_y = 0.1 * 9.81  # Aceleración en Y (m/s²)
+    acceleration_z = 0.1 * 9.81  # Aceleración en Z (m/s²)
+
+    aplicar_cargas_inerciales(masa_acumulada_por_nodo, acceleration_x, acceleration_y, acceleration_z)
     ops.system('BandSPD')
     ops.numberer('RCM')
     ops.constraints('Plain')

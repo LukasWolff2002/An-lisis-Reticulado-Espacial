@@ -19,7 +19,7 @@ Area_panel = unidad*unidad
 masa_total = Area_panel*gamma_rigido  # Masa de un panel solar
 
 #Para el analisi termico
-alpha = -1.1e-6 #Coeficiente de dilatacion termica
+alpha = -0.5e-6 #Coeficiente de dilatacion termica
 deltaT = 100
 
 #Variable para agregar barras centrales
