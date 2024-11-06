@@ -2,8 +2,8 @@ import numpy as np
 
 #Carbono
 E = 338e9 #GPa
-D1 = 0.00050 #m
-D2 = 0.000200 #m
+D1 = 0.0050 #m
+D2 = 0.002500 #m
 gamma = 1.91 #g/cm3
 gamma = gamma*1000 #kg/m3
 
@@ -20,7 +20,7 @@ masa_total = Area_panel*gamma_rigido  # Masa de un panel solar
 
 #Para el analisi termico
 alpha = 0.5e-6 #Coeficiente de dilatacion termica
-deltaT = 100
+deltaT = 200
 
 #Variable para agregar barras centrales
 barras_centrales = True

@@ -2,8 +2,8 @@ import numpy as np
 
 #Carbono
 E = 338e9 #GPa
-D1 = 0.00050 #m
-D2 = 0.000200 #m
+D1 = 0.0050 #m
+D2 = 0.00250 #m
 gamma = 1.91 #g/cm3
 gamma = gamma*1000 #kg/m3
 

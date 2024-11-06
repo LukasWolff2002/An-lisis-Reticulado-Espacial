@@ -311,6 +311,7 @@ def main():
         visualizar_modo(i, np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()]), elements, eigenfrequencies, conexiones_paneles, scale=0.1)
 
     print('')
+
     masa_total_barras = calcular_masa_total_barras(elements, A, gamma)
     masa_total_panel = num_capas * gamma_rigido * Area_panel
     print(f'Masa total de todas las barras: {masa_total_barras} kg')
