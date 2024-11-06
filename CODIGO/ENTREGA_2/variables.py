@@ -9,7 +9,7 @@ gamma = gamma*1000 #kg/m3
 
 unidad = 2.6 #metro
 
-num_capas = 10
+num_capas = 5
 
 A = np.pi*(D1**2-D2**2)/4 #Area de la seccion tubular
 
@@ -19,8 +19,8 @@ Area_panel = unidad*unidad
 masa_total = Area_panel*gamma_rigido  # Masa de un panel solar
 
 #Para el analisi termico
-alpha = -0.5e-6 #Coeficiente de dilatacion termica
+alpha = 0.5e-6 #Coeficiente de dilatacion termica
 deltaT = 100
 
 #Variable para agregar barras centrales
-barras_centrales = False
+barras_centrales = True

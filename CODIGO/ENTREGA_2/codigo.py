@@ -101,9 +101,9 @@ def aplicar_cargas_inerciales(masa_acumulada_por_nodo, acceleration_x, accelerat
     ops.timeSeries('Constant', 1)
     ops.pattern('Plain', 1, 1)
     for nodo, masa in masa_acumulada_por_nodo.items():
-        F_inertial_x = -masa * acceleration_x  # Fuerza inercial en X
-        F_inertial_y = -masa * acceleration_y  # Fuerza inercial en Y
-        F_inertial_z = -masa * acceleration_z  # Fuerza inercial en Z
+        F_inertial_x = masa * acceleration_x  # Fuerza inercial en X
+        F_inertial_y = masa * acceleration_y  # Fuerza inercial en Y
+        F_inertial_z = masa * acceleration_z  # Fuerza inercial en Z
         ops.load(nodo, F_inertial_x, F_inertial_y, F_inertial_z)
 
 # --- Asignación de Masas ---
@@ -176,12 +176,53 @@ def graficar_desplazamientos_inercia(elements, conexiones_paneles, escala):
         plotter.show_axes()
         plotter.show()
 
-def graficar_desplazamientos_termicos(elements, nodos_paneles, escala):
+def graficar_desplazamientos_combinados_inercia(elements, conexiones_paneles, escala=1.0, titulo="Desplazamiento Combinado"):
+    """
+    Grafica la estructura original y desplazada con desplazamientos combinados en X, Y y Z.
+    
+    Parámetros:
+    - elements: Lista de elementos (element_id, nodo_i, nodo_j).
+    - conexiones_paneles: Lista de paneles definidos por sus nodos.
+    - escala: Factor de escala para amplificar los desplazamientos.
+    - titulo: Título del gráfico.
+    """
     plotter = pv.Plotter()
     nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
-    deformaciones = [np.array([ops.nodeDisp(tag)[i] for tag in ops.getNodeTags()]) for i in range(3)]
+    displacements = [
+        np.array([ops.nodeDisp(tag)[i] for tag in ops.getNodeTags()]) for i in range(3)
+    ]
+    print("Desplazamientos en X:", displacements[0])
+    print("Desplazamientos en Y:", displacements[1])
+    print("Desplazamientos en Z:", displacements[2])
 
-    print("Desplazamientos Termicos:", deformaciones[0])
+    displacements = np.array([ops.nodeDisp(tag) for tag in ops.getNodeTags()])
+
+    print("Desplazamientos Totales por Inercia:", displacements)
+    
+    truss = pv.PolyData(nodes)
+    truss.lines = np.hstack([[2, e[1] - 1, e[2] - 1] for e in elements])
+    
+    truss_desplazado = truss.copy()
+    truss_desplazado.points += displacements * escala
+    
+    plotter.add_mesh(truss, color='blue', label="Estructura Original")
+    plotter.add_mesh(truss_desplazado, color='red', label="Estructura Desplazada")
+    visualizar_estructura_rigida(conexiones_paneles, plotter, color='gold')
+    plotter.add_legend([("Estructura Original", "blue"), ("Estructura Desplazada", "red")])
+    plotter.add_text(f"{titulo} (Escala: {escala})", position='upper_left', font_size=10)
+    plotter.show_axes()
+    plotter.show()
+
+
+def graficar_desplazamientos_termicos(elements, nodos_paneles, escala):
+    plotter = pv.Plotter()
+    node_tags = ops.getNodeTags()
+    nodes = np.array([ops.nodeCoord(tag) for tag in node_tags])
+    deformaciones = [np.array([ops.nodeDisp(tag)[i] for tag in node_tags]) for i in range(3)]
+
+    print("Desplazamientos Térmicos X:", deformaciones[0])
+    print("Desplazamientos Térmicos Y:", deformaciones[1])
+    print("Desplazamientos Térmicos Z:", deformaciones[2])
 
     truss = pv.PolyData(nodes)
     truss.lines = np.hstack([[2, e[1] - 1, e[2] - 1] for e in elements])
@@ -194,8 +235,14 @@ def graficar_desplazamientos_termicos(elements, nodos_paneles, escala):
     plotter.add_mesh(truss_desplazado, color='orange', label="Estructura Desplazada Térmicamente")
     visualizar_estructura_rigida(nodos_paneles, plotter, color='gold')
     plotter.add_text(f"Desplazamiento Térmico (Escala: {escala})", position='upper_left', font_size=10)
+
+    # Agregar etiquetas de números de nodos
+    labels = [str(tag) for tag in node_tags]
+    plotter.add_point_labels(truss_desplazado.points, labels, point_size=5, font_size=12, text_color='black', name='labels')
+
     plotter.show_axes()
     plotter.show()
+
 
 # --- Funciones Auxiliares ---
 def encontrar_barra(nodo_i, nodo_j, elements):
@@ -228,6 +275,8 @@ def variacion_termica(conexiones_paneles, elements):
 
                 fuerza_nodo_i = -force_thermal * vector_unitario
                 fuerza_nodo_j = force_thermal * vector_unitario
+
+                print('se cargaron los nodos', nodo_i, nodo_j, 'con una fuerza termica' , fuerza_nodo_i, fuerza_nodo_j)
 
                 ops.load(nodo_i, *fuerza_nodo_i)
                 ops.load(nodo_j, *fuerza_nodo_j)
@@ -263,12 +312,16 @@ def main():
     masa_acumulada_por_nodo, nodos_paneles = acumular_masa_paneles(conexiones_paneles, masa_total, masa_acumulada_por_nodo)
     asignar_masas_a_nodos(masa_acumulada_por_nodo, nodos_paneles)
 
+    #-----------------------------------------------------
+    #Analisis Inercial
+    #-----------------------------------------------------
     # Las aceleraciones que se estan aplicando al analisis son:
-    acceleration_x = 0.1 * 9.81  # Aceleración en X (m/s²)
-    acceleration_y = 0.1 * 9.81  # Aceleración en Y (m/s²)
-    acceleration_z = 0.1 * 9.81  # Aceleración en Z (m/s²)
+    acceleration_x = 1 * 9.81  # Aceleración en X (m/s²)
+    acceleration_y = 1 * 9.81  # Aceleración en Y (m/s²)
+    acceleration_z = 0 * 9.81  # Aceleración en Z (m/s²)
 
     aplicar_cargas_inerciales(masa_acumulada_por_nodo, acceleration_x, acceleration_y, acceleration_z)
+    
     ops.system('BandSPD')
     ops.numberer('RCM')
     ops.constraints('Plain')
@@ -277,7 +330,19 @@ def main():
     ops.analysis('Static')
     ops.analyze(1)
 
-    graficar_desplazamientos_inercia(elements, conexiones_paneles, escala=50)
+    #Esta funcion grafica los desplzamientos en cada direccion por separado
+    #graficar_desplazamientos_inercia(elements, conexiones_paneles, escala=50)
+
+    #Esta funcion grafica los desplazamientos en las tres direcciones combinados
+    graficar_desplazamientos_combinados_inercia(elements, conexiones_paneles, escala=10, titulo="Desplazamiento Inercial")
+
+    #-----------------------------------------------------
+    #Analisis Termico
+    #-----------------------------------------------------
+    # Resetear el estado del modelo antes del análisis térmico
+    ops.remove('loadPattern', 1)  # Si el patrón de carga inercial tiene tag 1
+    ops.remove('loadPattern', 2)  # Si el patrón de carga inercial tiene tag 1
+    ops.remove('loadPattern', 3)  # Si el patrón de carga inercial tiene tag 1
 
     # Aplicar deformación térmica y realizar análisis
     variacion_termica(conexiones_paneles, elements)
@@ -289,7 +354,13 @@ def main():
     ops.analysis('Static')
     ops.analyze(1)
 
-    graficar_desplazamientos_termicos(elements, conexiones_paneles, escala=10)
+    graficar_desplazamientos_termicos(elements, conexiones_paneles, escala=100)
 
 if __name__ == "__main__":
     main()
+
+
+#Debo encontrar theta y phi que maximicen la fuerza en cada barra
+#Logicamente las barras que tienen mayor fuerz son las que unen el primer bloque
+
+#la fuerza es maxima en cada barra cuando la acelaeracion es en la direccion de esta
