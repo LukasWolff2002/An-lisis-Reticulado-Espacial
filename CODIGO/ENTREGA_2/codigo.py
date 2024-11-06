@@ -258,13 +258,22 @@ def variacion_termica(conexiones_paneles, elements):
     ops.pattern('Plain', 2, 2)
     thermal_strain = alpha * deltaT
 
+    #Genero una lista con los nodos previamente cargados
+    nodos_previamente_cargados = set()
     for nodos_panel in conexiones_paneles:
         num_nodos = len(nodos_panel)
         for i in range(num_nodos):
             nodo_i = nodos_panel[i]
             nodo_j = nodos_panel[(i + 1) % num_nodos]
+
             element_id = encontrar_barra(nodo_i, nodo_j, elements)
-            if element_id is not None:
+
+            par_nodos = frozenset({nodo_i, nodo_j})
+
+            if par_nodos in nodos_previamente_cargados:
+                print('Ya se cargo la barra', nodo_j, nodo_i)
+    
+            elif element_id is not None:
                 E_element = E
                 A_element = A
                 force_thermal = E_element * A_element * thermal_strain
@@ -280,6 +289,8 @@ def variacion_termica(conexiones_paneles, elements):
 
                 ops.load(nodo_i, *fuerza_nodo_i)
                 ops.load(nodo_j, *fuerza_nodo_j)
+
+                nodos_previamente_cargados.add(par_nodos)
             else:
                 print(f"No se encontró el elemento entre los nodos {nodo_i} y {nodo_j}")
 
@@ -314,6 +325,7 @@ def main():
 
     #-----------------------------------------------------
     #Analisis Inercial
+    #Esta parte hay que hacerla una funcion que haga el analisis optimizando para cada barra
     #-----------------------------------------------------
     # Las aceleraciones que se estan aplicando al analisis son:
     acceleration_x = 1 * 9.81  # Aceleración en X (m/s²)
@@ -336,16 +348,19 @@ def main():
     #Esta funcion grafica los desplazamientos en las tres direcciones combinados
     graficar_desplazamientos_combinados_inercia(elements, conexiones_paneles, escala=10, titulo="Desplazamiento Inercial")
 
+    # Resetear el estado del modelo antes del análisis térmico o para el siguiente analisis inercial
+    ops.remove('loadPattern', 1)  # Si el patrón de carga inercial tiene tag 1
+    ops.remove('loadPattern', 2)  # Si el patrón de carga inercial tiene tag 2
+    ops.remove('loadPattern', 3)  # Si el patrón de carga inercial tiene tag 3
+
     #-----------------------------------------------------
     #Analisis Termico
     #-----------------------------------------------------
-    # Resetear el estado del modelo antes del análisis térmico
-    ops.remove('loadPattern', 1)  # Si el patrón de carga inercial tiene tag 1
-    ops.remove('loadPattern', 2)  # Si el patrón de carga inercial tiene tag 1
-    ops.remove('loadPattern', 3)  # Si el patrón de carga inercial tiene tag 1
+
 
     # Aplicar deformación térmica y realizar análisis
     variacion_termica(conexiones_paneles, elements)
+    
     ops.system('BandSPD')
     ops.numberer('RCM')
     ops.constraints('Plain')
