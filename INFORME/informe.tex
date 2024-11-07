@@ -1,0 +1,194 @@
+\documentclass{article}  % Define la clase del documento.
+
+% Paquetes de idioma y codificación
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}  % Ajusta el idioma del documento a español.
+\usepackage{tabularx}  % Permite la creación de tablas con ancho ajustable.
+
+% Paquete de geometría para configurar márgenes y tamaño de papel
+\usepackage[letterpaper, margin=3cm]{geometry}
+
+% Paquetes de tipografía
+\usepackage{mathptmx}    % Usa Times New Roman como fuente.
+\usepackage{microtype}   % Mejora la justificación del texto.
+
+% Paquetes para manejo de colores y gráficos
+\usepackage{xcolor}      % Define y utiliza colores.
+\usepackage{graphicx}    % Permite la inserción de imágenes.
+\usepackage{tikz}        % Creación de gráficos vectoriales.
+
+% Configuración de enlaces y referencias cruzadas
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks   = true,
+    linkcolor    = darkblue,
+    citecolor    = black,
+    filecolor    = blue,
+    urlcolor     = blue
+}
+
+%\usepackage{etoolbox}  % Carga este paquete en el preámbulo para modificar entornos de bibliografia
+%\patchcmd{\thebibliography}{\chapter*}{\part*}{}{}
+
+\usepackage{media9} % Permite la inserción de multimedia.
+
+% Paquetes para la mejora visual de tablas y figuras
+\usepackage{booktabs}    % Para tablas de alta calidad.
+\usepackage{float}       % Controla la posición de figuras y tablas.
+
+% Paquete para la personalización de códigos fuente
+\usepackage{listings}
+\lstset{
+    literate=
+    {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+    {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+    {ñ}{{\~n}}1 {Ñ}{{\~N}}1 {ü}{{\"u}}1 {Ü}{{\"U}}1,
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{red},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    language=TeX,
+    morecomment=[l]\#,
+    frame=single,
+    rulecolor=\color{black}
+}
+
+% Definición de colores al estilo Visual Studio Code
+\definecolor{darkblue}{rgb}{0.0, 0.0, 0.55}  % Enlaces
+\definecolor{codegreen}{rgb}{0.25, 0.49, 0.48}  % Comentarios
+\definecolor{codegray}{rgb}{0.5, 0.5, 0.5}  % Números y anotaciones
+\definecolor{codepurple}{rgb}{0.58, 0, 0.82}  % Palabras clave
+\definecolor{backcolour}{rgb}{0.95, 0.95, 0.92}  % Fondo de código
+
+% Configuraciones de párrafo y matemáticas
+\usepackage{amsmath}
+\usepackage{parskip}    % Espaciado entre párrafos.
+\usepackage{ragged2e}   % Justificación mejorada.
+
+% Configuración de secciones y encabezados
+\usepackage{titlesec}
+\titleclass{\part}{top} % Make part like a class
+\titleformat{\part}[display]
+  {\normalfont\huge\bfseries\centering}{\thepart}{40pt}{\Huge}
+\titlespacing*{\part}{0pt}{-60pt}{10pt}
+\titleformat{\part}
+  {\normalfont\huge\bfseries}{}{0pt}{}
+
+% Asegúrate de usar esto para mantener el estilo en las páginas de las partes
+\titleformat{\part}[display]
+  {\normalfont\huge\bfseries}{}{0pt}{}
+  [\thispagestyle{fancy}] % Aplica el estilo fancy a las páginas de las partes
+
+% Configuración de encabezados y pies de página personalizados
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\raisebox{0.20cm}{\textbf{Métodos Computacionales en Obras Civiles}}}
+\fancyhead[R]{\raisebox{0.1cm}{\includegraphics[width=0.25\linewidth]{LOGO_UNIVERSIDAD.jpg}}}
+\fancyhead[C]{\rule{\textwidth}{0.6pt}}
+\fancyfoot[C]{\rule{\textwidth}{0.6pt}}
+\fancyfoot[R]{\raisebox{-1.5\baselineskip}{\thepage}}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Configuración avanzada de geometría
+\geometry{
+  top=3.5cm, % Aumenta el espacio en la parte superior para subir el encabezado
+  bottom=2.5cm,
+  headheight=2.5cm % Aumenta la altura del encabezado si es necesario
+}
+
+% Configuracion de bibliografia
+\usepackage{natbib}
+\bibliographystyle{unsrtnat}  % Puedes cambiarlo por `unsrtnat`, `abbrvnat`, etc.
+\usepackage{tabularx} 
+\begin{document}
+%----------------------------------------------------------------------------------------
+% PORTADA
+%----------------------------------------------------------------------------------------
+\begin{titlepage}%Inicio de la carátula, solo modificar los datos necesarios
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}} 
+\center 
+%----------------------------------------------------------------------------------------
+%	ENCABEZADO
+%----------------------------------------------------------------------------------------
+\includegraphics[width=10cm]{LOGO_UNIVERSIDAD.jpg}\\ % Si esta plantilla se copio correctamente, va a llevar la imagen del logo de la facultad.OBS: Es necesario incluir el paquete: graphicx
+\vspace{3cm}
+%----------------------------------------------------------------------------------------
+%	SECCION DEL TITULO
+%----------------------------------------------------------------------------------------
+\HRule \\[0.4cm]
+{ \huge \bfseries Entrega 3, Proyecto 1}\\[0.4cm] % Titulo del documento
+{ \huge \bfseries Metodos Computacionales en OOCC, IOC 4201}\\[0.4cm] % Titulo del documento
+\HRule \\[1.5cm]
+ \vspace{4.5cm}
+%----------------------------------------------------------------------------------------
+%	SECCION DEL AUTOR
+%----------------------------------------------------------------------------------------
+\begin{flushright}
+    { \textbf{Profesor:}\\
+    Patricio Moreno\\
+    \vspace{0.2cm}
+    \textbf{Ayudante:} \\
+    Maximiliano Biasi\\
+    \vspace{0.2cm}
+    \textbf{Alumno:} \\
+    Bernardo Caprile Canala-Echevarría\\
+    Pedro Tomás Valenzuela Bejares\\
+    Felipe Alberto Vicencio Fossa\\
+    Lukas Wolff Casanova\\
+}
+\end{flushright}
+\vspace{1cm}
+%----------------------------------------------------------------------------------------
+%	SECCION DE LA FECHA
+%----------------------------------------------------------------------------------------
+{\large \textbf{\today}}\\[2cm] % El comando \today coloca la fecha del dia, y esto se actualiza con cada compilacion, en caso de querer tener una fecha estatica, reemplazar el \today por la fecha deseada
+\end{titlepage}
+
+\newpage
+\thispagestyle{empty} % Deshabilita el número de página en la página del índice
+\include{resumen}
+%----------------------------------------------------------------------------------------
+%  INDICE
+%----------------------------------------------------------------------------------------
+\newpage
+\thispagestyle{empty} % Deshabilita el número de página en la página del índice
+\tableofcontents
+\thispagestyle{plain} % Deshabilita el encabezado en la página del índice
+\thispagestyle{empty} % Deshabilita el número de página en la página del índice
+
+\thispagestyle{empty}
+\listoffigures 
+\thispagestyle{plain} % Deshabilita el encabezado en la página del índice %
+\thispagestyle{empty}
+\newpage
+%----------------------------------------------------------------------------------------
+%ACÁ EMPIEZA EL INFORME
+\setcounter{page}{1}
+%----------------------------------------------------------------------------------------
+
+\include{entrega1}
+
+
+\renewcommand{\refname}{}  % Para documentos tipo 'article'
+\renewcommand{\bibname}{}  % Para documentos tipo 'book' o 'report'
+%\newpage
+%\part{Referencias}  % Título de la bibliografía como un \part
+%\vspace{-1cm}
+%\bibliography{referencias}  % Nombre del archivo .bib
+
+\end{document}

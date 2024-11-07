@@ -1,0 +1,474 @@
+\part{Entrega 1}
+
+
+\section{Introducción}
+Las estructuras que se utilizan en el espacio deben contar con una serie de características que les permitan operar y cumplir con su función de forma eficiente y segura. Una de estas características es la relación de masa estructural y la longitud de la estructura con las frecuencias y modos de vibración de la misma. Si estos requisitos no se cumplen, mandar la estructura al espacio además de ser costoso, puede ser peligroso para la tripulación y la misión.
+
+En este informe se estudiarán varias relaciones de masa estructural para obtener un área óptima de un reticulado, junto con la determinación de los modos de vibración que sean mayores a 0.1 Hz, ya que esta es una frecuencia que se considera segura en el espacio.
+
+Para cumplir con este objetivo, se emplearán la librería OpenSeesPy para el análisis estructural y la identificación de las frecuencias y modos de vibración de la estructura, y PyVista para la visualización de los datos obtenidos.
+\newpage
+\section{Modelo}
+Lo primero que se hizo para poder modelar de forma precisa, fue la creación de una función la cual permitiera la creación de un reticulado con las dimensiones y cantidad de vanos que el usuario deseara, que es el lo que se muestra a continuación:
+
+\begin{lstlisting}
+def conectar_nodos_cuadrado(node_tags, element_id, A, material_id, gamma, elements):
+    for i in range(len(node_tags)):
+        j = (i + 1) % len(node_tags)  # Cerrar el ciclo conectando el último con el primero
+        #print(f'{i=}, {j=}')
+        elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j], A, material_id, gamma))
+        element_id += 1
+
+    #Ahora conecto una diagonal
+    if node_tags[0] == 1:
+        #Estoy en el primer elemento
+        elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j]+1, A, material_id, gamma))
+        element_id += 1
+
+    elif node_tags[-1] == num_capas*4 + 4:
+        #Estoy en el ultimo elemento
+        elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j]+1, A, material_id, gamma))
+        element_id += 1
+
+    else:
+        #Agrego dos diagonales
+        elements.append(crear_elemento_truss(element_id, node_tags[i], node_tags[j]+1, A, material_id, gamma))
+        element_id += 1
+
+        elements.append(crear_elemento_truss(element_id, node_tags[i]-1, node_tags[j], A, material_id, gamma))
+        element_id += 1
+    return element_id
+\end{lstlisting}
+
+\newpage
+
+Así, los reticulados para 2, 4, 8 y 16 módulos se visualizan de la siguiente forma.
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/2.png}
+        \caption{Reticulado de 2 módulos.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/4.png}
+        \caption{Reticulado de 4 módulos.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/8.png}
+        \caption{Reticulado de 8 módulos.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/16.png}
+        \caption{Reticulado de 16 módulos.}
+    \end{minipage}
+\end{figure}
+
+Luego, se procedió a la obtención de las frecuencias y modos de vibración de la estructura, para lo cual se utilizó el comando \texttt{eigen} de OpenSeesPy. Con los datos obtenidos, se procedió a la visualización de los modos de vibración de la estructura, para lo cual se utilizó PyVista. A continuación, se muestran las estructuras con su deformación en el modo 1 de vibración, como ejemplo.
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/m1_2.png}
+        \caption{Reticulado de 2 y su modo 1.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/m1_4.png}
+        \caption{Reticulado de 4 y su modo 1.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/m1_8.png}
+        \caption{Reticulado de 8 y su modo 1.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/m1_16.png}
+        \caption{Reticulado de 16 y su modo 1.}
+    \end{minipage}
+\end{figure}
+
+Posteriormente, se procedió a calcular la relación de masa estructural con respecto a los paneles solares, para lo cual se utilizó la siguiente fórmula:
+
+\begin{equation}
+    \text{RME} = \frac{\text{Masa de la estructura}}{\text{Masa de los paneles solares}} \cdot 100
+\end{equation}
+
+Finalmente, se fueron calibrando los diámetros internos y externos de los tubos de la estructura, para obtener una relación de masa estructural que cumpliera con los siguientes porcentajes: 10\%, 20\%, 30\%
+
+\section{Resultados}
+
+
+\subsection{Caso de 2 vanos}
+En el caso de 2 vanos se obtuvieron los siguientes diámetros de las barras de fibra de carbono, además, se muestran los porcentajes de RME.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{cccc}
+    \toprule
+     A & Diámetro exterior [mm] & Diámetro interior [mm] & RME [\%] \\
+    \midrule
+     $A_{10\%}$ &  4 &  2.6 &  10.89 \\
+     $A_{20\%}$ &  5 &  2.5 &  22.11 \\
+     $A_{30\%}$ &  5.8 &  2.4 &  32.88 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+Donde se obtuvieron las siguientes frecuencias de vibración para cada porcentaje de RME.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{cccc}
+    \toprule
+     Frecuencia (Hz) & $A_{10\%}$ & $A_{20\%}$ & $A_{30\%}$ \\
+    \midrule
+     1 &  0.245 &  0.349 &  0.425 \\
+     2 &  0.283 &  0.400 &  0.484 \\
+     3 &  0.314 &  0.445 &  0.540 \\
+     4 &  0.666 &  0.947 &  1.154 \\
+     5 &  0.673 &  0.958 &  1.166 \\
+     6 &  0.744 &  1.054 &  1.280 \\
+     7 &  1.014 &  1.442 &  1.757 \\
+     8 &  1.046 &  1.488 &  1.812 \\
+     9 &  1.206 &  1.717 &  2.092 \\
+     10 &  1.454 &  2.070 &  2.522 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+En este caso todas las combinaciones logran la frecuencia fundamental esperada, ya que en todos los casos es mayor a 0.1 Hz. Además, se puede observar que a medida que aumenta el porcentaje de RME, las frecuencias también aumentan.
+
+A continuación se muestra un gráfico de la frecuencia para cada modo de vibración y cada RME. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../grafico_frecuencias_2vanos.png}
+    \caption{Frecuencia de vibración para cada modo de vibración y cada RME.}
+\end{figure}
+
+\subsection{Caso de 4 vanos}
+En el caso de 4 vanos se obtuvieron los siguientes diámetros de las barras de fibra de carbono, además, se muestran los porcentajes de RME.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{cccc}
+    \toprule
+     A & Diámetro exterior [mm] & Diámetro interior [mm] & RME [\%] \\
+    \midrule
+     $A_{10\%}$ &  4 &  2.6 &  10.41 \\
+     $A_{20\%}$ &  5 &  2.5 &  21.13 \\
+     $A_{30\%}$ &  5.8 &  2.4 &  31.41 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+Donde se obtuvieron las siguientes frecuencias de vibración para cada porcentaje de RME.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{cccc}
+    \toprule
+     Frecuencia (Hz) & $A_{10\%}$ & $A_{20\%}$ & $A_{30\%}$ \\
+    \midrule
+     1 &       0.103 &       0.146 &       0.175 \\
+     2 &       0.141 &       0.195 &       0.228 \\
+     3 &       0.162 &       0.228 &       0.272 \\
+     4 &       0.342 &       0.486 &       0.582 \\
+     5 &       0.393 &       0.553 &       0.656 \\
+     6 &       0.449 &       0.633 &       0.754 \\
+     7 &       0.597 &       0.849 &       1.015 \\
+     8 &       0.624 &       0.887 &       1.060 \\
+     9 &       0.688 &       0.974 &       1.162 \\
+     10 &       0.735 &       1.039 &       1.236 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+En este caso se puede observar que todas las combinaciones logran la frecuencia esperada, ya que todas son mayores a 0.1 Hz.
+
+A continuación, se muestra el gráfico de la frecuencia para cada modo de vibración y cada RME. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../grafico_frecuencias_4vanos.png}
+    \caption{Frecuencia de vibración para cada modo de vibración y cada RME.}
+\end{figure}
+
+Junto a esto, se obtuvieron los gráficos de los 10 primeros modos de vibración de la estructura (N=4).
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod1_4.png}
+        \caption{Primer modo de vibración N=4.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod2_4.png}
+        \caption{Segundo modo de vibración N=4.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod3_4.png}
+        \caption{Tercer modo de vibración N=4.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod4_4.png}
+        \caption{Cuarto modo de vibración N=4.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod5_4.png}
+        \caption{Quinto modo de vibración N=4.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod6_4.png}
+        \caption{Sexto modo de vibración N=4.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod7_4.png}
+        \caption{Séptimo modo de vibración N=4.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod8_4.png}
+        \caption{Octavo modo de vibración N=4.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod9_4.png}
+        \caption{Noveno modo de vibración N=4.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod10_4.png}
+        \caption{Décimo modo de vibración N=4.}
+    \end{minipage}
+\end{figure}
+
+\subsection{Caso de 8 vanos}
+En el caso de 8 vanos se obtuvieron los siguientes diámetros de las barras de fibra de carbono, además, se muestran los porcentajes de RME.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{cccc}
+    \toprule
+     A & Diámetro exterior [mm] & Diámetro interior [mm] & RME [\%] \\
+    \midrule
+     $A_{10\%}$ &  4 &  2.6 &  10.17 \\
+     $A_{20\%}$ &  5 &  2.5 &  20.63 \\
+     $A_{30\%}$ &  5.8 &  2.4 &  30.68 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+Donde se obtuvieron las siguientes frecuencias de vibración para cada porcentaje de RME.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{cccc}
+    \toprule
+     Frecuencia (Hz) & $A_{10\%}$ & $A_{20\%}$ & $A_{30\%}$ \\
+    \midrule
+     1 &       0.035 &       0.049 &       0.059 \\
+     2 &       0.064 &       0.083 &       0.095 \\
+     3 &       0.081 &       0.115 &       0.139 \\
+     4 &       0.147 &       0.208 &       0.253 \\
+     5 &       0.195 &       0.266 &       0.314 \\
+     6 &       0.234 &       0.330 &       0.399 \\
+     7 &       0.307 &       0.435 &       0.528 \\
+     8 &       0.336 &       0.474 &       0.574 \\
+     9 &       0.388 &       0.548 &       0.663 \\
+     10 &       0.444 &       0.629 &       0.760 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+En este caso se puede observar que ninguna de las combinaciones logra la frecuencia fundamental esperada, ya que en todos los casos es menor a 0.1 Hz.
+
+A continuación se muestra un gráfico de la frecuencia para cada modo de vibración y cada RME. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../grafico_frecuencias_8vanos.png}
+    \caption{Frecuencia de vibración para cada modo de vibración y cada RME.}
+\end{figure}
+
+\newpage
+
+\subsection{Caso de 16 vanos}
+En el caso de 16 vanos se obtuvieron los siguientes diámetros de las barras de fibra de carbono, además, se muestran los porcentajes de RME.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{cccc}
+    \toprule
+     A & Diámetro exterior [mm] & Diámetro interior [mm] & RME [\%] \\
+    \midrule
+     $A_{10\%}$ &  4 &  2.6 &  10.05 \\
+     $A_{20\%}$ &  5 &  2.5 &  20.39 \\
+     $A_{30\%}$ &  5.8 &  2.4 &  30.32 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+Donde se obtuvieron las siguientes frecuencias de vibración para cada porcentaje de RME.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{cccc}
+    \toprule
+     Frecuencia (Hz) & $A_{10\%}$ & $A_{20\%}$ & $A_{30\%}$ \\
+    \midrule
+     1 &       0.010 &       0.014 &       0.017 \\
+     2 &       0.025 &       0.029 &       0.031 \\
+     3 &       0.040 &       0.057 &       0.069 \\
+     4 &       0.052 &       0.074 &       0.090 \\
+     5 &       0.086 &       0.112 &       0.130 \\
+     6 &       0.113 &       0.160 &       0.194 \\
+     7 &       0.130 &       0.184 &       0.223 \\
+     8 &       0.161 &       0.222 &       0.264 \\
+     9 &       0.192 &       0.270 &       0.326 \\
+     10 &       0.212 &       0.299 &       0.363 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+En este caso se puede observar que ninguna de las combinaciones logra la frecuencia fundamental esperada, ya que en todos los casos es menor a 0.1 Hz.
+
+A continuación se muestra un gráfico de la frecuencia para cada modo de vibración y cada RME. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../grafico_frecuencias_16vanos.png}
+    \caption{Frecuencia de vibración para cada modo de vibración y cada RME.}
+\end{figure}
+
+Junto a esto, se obtuvieron los gráficos de los 10 primeros modos de vibración de la estructura (N=16).
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod1_16.png}
+        \caption{Primer modo de vibración N=16.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod2_16.png}
+        \caption{Segundo modo de vibración N=16.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod3_16.png}
+        \caption{Tercer modo de vibración N=16.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod4_16.png}
+        \caption{Cuarto modo de vibración N=16.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod5_16.png}
+        \caption{Quinto modo de vibración N=16.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod6_16.png}
+        \caption{Sexto modo de vibración N=16.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod7_16.png}
+        \caption{Séptimo modo de vibración N=16.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod8_16.png}
+        \caption{Octavo modo de vibración N=16.}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod9_16.png}
+        \caption{Noveno modo de vibración N=16.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{FOTOS/mod10_16.png}
+        \caption{Décimo modo de vibración N=16.}
+    \end{minipage}
+\end{figure}
+
+\subsection{Comparación de los casos}
+
+En este caso, se puede observar que a medida que aumenta el número de vanos, las frecuencias de vibración disminuyen, para una misma sección transversal. Esto ocurre porque la estructura se vuelve más flexible al aumentar su longitud total, lo que genera una menor rigidez global, haciendo que las vibraciones sean más lentas.
+
+En cuanto a distintas secciones transversales para un mismo N, las frecuencias aumentan con el área de la sección. Una sección transversal mayor aumenta la rigidez en cada vano, lo cual incrementa las frecuencias, porque la rigidez y la masa estructural determinan la resistencia a la vibración, es decir, estructuras más rígidas vibran a frecuencias más altas, mientras que las más dúctiles tienen frecuencias más bajas.
+
+Por lo tanto, se puede decir que la estructura con mayor frecuencia es la del caso de 2 vanos con un porcentaje de RME del 30\%, y la de menor frecuencia es la del caso de 16 vanos con un porcentaje de RME del 10\%.
+
+Además, cabe mencionar que no en todos los casos se logró la frecuencia fundamental mínima esperada de 0.1 Hz. En este caso, los que lograron la frecuencia fundamental mínima esperada fueron los casos de 2 y 4 vanos, mientras que los casos de 8 y 16 vanos no la lograron.
+
+En el caso de que la estructura no fuese ``lineal'' la relación entre RME, cantidad de vanos y frecuencias de vibración no sería tan directa, ya que la distribución de cargas en los nodos no sería uniforme y la frecuencia dependería de la geometría del reticulado, junto con el RME. Luego, al ser superficial, podría ofrecer mayor rigidez y estabilidad, pero al aumentar los vanos el modo de vibrar de la estructura podría cambiar, generando zonas con concentraciones de tensiones y deformaciones, lo que podría afectar la vida útil de la estructura.
+
+\newpage
+
+\section{Conclusión}
+
+En conclusión, el análisis del reticulado espacial fue exitoso. Se logró destacar cómo la frecuencia de vibración depende tanto de la cantidad de vanos como de la relación de masa estructural (RME). 
+
+Así, estructuras más largas y flexibles (con mayor N) presentan frecuencias naturales menores, mientras que una sección transversal mayor aumenta la rigidez, al igual que las frecuencias de las estructuras. Con esto, se puede concluir que solo las configuraciones con 2 y 4 vanos cumplieron con la frecuencia mínima de 0.1 Hz.
+
+En casos donde el diseño no es lineal, el comportamiento de las frecuencias es aún más complejo debido a la variabilidad en la distribución de tensiones y deformaciones. Esto puede influir en la durabilidad y estabilidad, generando zonas de concentración de esfuerzos. 
