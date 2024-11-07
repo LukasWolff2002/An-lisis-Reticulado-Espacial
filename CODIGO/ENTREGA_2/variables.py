@@ -24,3 +24,8 @@ deltaT = 100
 
 #Variable para agregar barras centrales
 barras_centrales = True
+
+if barras_centrales:
+        cruz = 'True'
+else:
+    cruz = 'False'
