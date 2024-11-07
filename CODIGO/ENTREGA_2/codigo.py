@@ -89,9 +89,9 @@ def generar_capas(nodes, num_capas, element_id, A, material_id, gamma, elements)
 def agregar_estructura_flexible(nodos_conectados, A_flexible, gamma_flexible, element_id, elements, material_id_flexible):
     for i in range(len(nodos_conectados)):
         j = (i + 1) % len(nodos_conectados)
-        elements.append(
-            crear_elemento_truss(element_id, nodos_conectados[i], nodos_conectados[j], A_flexible, material_id_flexible, gamma_flexible)
-        )
+        #elements.append(
+            #crear_elemento_truss(element_id, nodos_conectados[i], nodos_conectados[j], A_flexible, material_id_flexible, gamma_flexible)
+        #)
         element_id += 1
     return element_id
 
@@ -168,33 +168,7 @@ def visualizar_estructura_rigida(nodos_paneles, plotter, color='green'):
         plotter.add_mesh(surface, color=color, show_edges=True, opacity=0.7)
 
 # --- Graficar Desplazamientos ---
-def graficar_desplazamientos_inercia(elements, conexiones_paneles, escala):
-    plotters = [pv.Plotter() for _ in range(3)]
-    nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
-    displacements = [
-        np.array([ops.nodeDisp(tag)[i] for tag in ops.getNodeTags()]) for i in range(3)
-    ]
-
-    #print("Desplazamientos en X:", displacements[0])
-    #print("Desplazamientos en Y:", displacements[1])
-    #print("Desplazamientos en Z:", displacements[2])
-
-    colors = ['cyan', 'green', 'red']
-    labels = ['X', 'Y', 'Z']
-    for i, plotter in enumerate(plotters):
-        truss = pv.PolyData(nodes)
-        truss.lines = np.hstack([[2, e[1] - 1, e[2] - 1] for e in elements])
-
-        truss_displaced = truss.copy()
-        truss_displaced.points[:, i] += displacements[i] * escala
-        plotter.add_mesh(truss, color='blue', label="Estructura Original")
-        plotter.add_mesh(truss_displaced, color=colors[i], label=f"Estructura Desplazada en {labels[i]}")
-        visualizar_estructura_rigida(conexiones_paneles, plotter, color='gold')
-        plotter.add_text(f"Desplazamiento por Inercia en {labels[i]} (Escala: {escala})", position='upper_left', font_size=10)
-        plotter.show_axes()
-        plotter.show()
-
-def graficar_desplazamientos_combinados_inercia(elements, conexiones_paneles, escala=1.0, titulo="Desplazamiento Combinado"):
+def graficar_desplazamientos_combinados_inercia(elements, conexiones_paneles, escala, titulo="Desplazamiento Combinado"):
     """
     Grafica la estructura original y desplazada con desplazamientos combinados en X, Y y Z.
     
@@ -325,20 +299,84 @@ def obtener_reacciones_en_apoyos(nodos_soporte):
         reacciones = ops.nodeReaction(nodo)
         print(f"Nodo {nodo}: Reacción Rx = {reacciones[0]:.2f}, Ry = {reacciones[1]:.2f}, Rz = {reacciones[2]:.2f}")
 
-def optimizador_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles, solucion):
-    # Las aceleraciones que se estan aplicando al analisis son:
-    acceleration_x = 0.1 * 9.81  # Aceleración en X (m/s²)
-    acceleration_y = 0.1 * 9.81  # Aceleración en Y (m/s²)
-    acceleration_z = 0.1 * 9.81  # Aceleración en Z (m/s²)
+def graficar_barras_coloreadas(elements, fuerzas_barras, titulo="Esfuerzos Internos en las Barras"):
+    """
+    Grafica la estructura original sin deformaciones, coloreando las barras según su fuerza interna.
+    
+    Parámetros:
+    - elements: Lista de elementos (element_id, nodo_i, nodo_j).
+    - fuerzas_barras: Diccionario con las fuerzas internas en las barras {element_id: fuerza}.
+    - titulo: Título del gráfico.
+    """
+    import pyvista as pv
+    plotter = pv.Plotter()
+    
+    nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
+    
+    # Crear lista de líneas y colores
+    lines = []
+    colors = []
+    for element in elements:
+        element_id, nodo_i, nodo_j = element
+        lines.append([2, nodo_i - 1, nodo_j - 1])
+        
+        fuerza = fuerzas_barras.get(element_id, 0)
+        if fuerza > 0:
+            color = 'red'  # Tensión
+        elif fuerza < 0:
+            color = 'blue'  # Compresión
+        else:
+            color = 'black'  # Sin fuerza
+        colors.append(color)
 
-    fuerzas_barras = {}
+    # Definir el rango de fuerzas para normalización
+    #fuerza_max = np.max(np.abs(fuerzas_barras.values()))
+    
+    #fuerzas_norm = np.array([fuerzas_barras.get(element_id, 0) / fuerza_max for element_id, _, _ in elements])
+    
+    # Crear un colormap que refleje el signo (por ejemplo, 'seismic')
+    #cmap = plt.get_cmap('seismic')
+    #colors = cmap((fuerzas_norm + 1) / 2)  # Ajustar al rango [0,1]
+    
+    truss = pv.PolyData(nodes)
+    truss.lines = np.hstack(lines)
+    
+    # Añadir cada barra con su color correspondiente
+    for i, line in enumerate(truss.lines.reshape(-1, 3)):
+        start_idx = line[1]
+        end_idx = line[2]
+        points = nodes[[start_idx, end_idx]]
+        segment = pv.Line(points[0], points[1])
+        plotter.add_mesh(segment, color=colors[i], line_width=2)
+    
+    # Agregar etiquetas de números de nodos (opcional)
+    node_tags = ops.getNodeTags()
+    labels = [str(tag) for tag in node_tags]
+    plotter.add_point_labels(nodes, labels, point_size=5, font_size=12, text_color='black', name='labels')
+    
+    plotter.add_text(titulo, position='upper_left', font_size=10)
+    plotter.show_axes()
+    plotter.show()
 
-    aceleraciones = [[acceleration_x,0,0],[0, acceleration_y, 0],[0,0, acceleration_z]]
+
+def calculo_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles, solucion):
+    
+    aceleracion_magnitud = 0.1 * 9.81  # Magnitud de la aceleración
+    aceleraciones = [[aceleracion_magnitud,0,0, 'Aceleracion X'],[0,aceleracion_magnitud,0, 'Axeleracion Y'],[0,0,aceleracion_magnitud, 'Aceleracion Z']]
+
+    fuerzas_maximas = {}
 
     for a in aceleraciones:
-
-        aplicar_cargas_inerciales(masa_acumulada_por_nodo, a[0], a[1], a[2], solucion)
+        fuerzas_barras = {}
         
+
+        # Definir una aceleración en la dirección de la barra
+        
+
+        # Aplicar cargas inerciales
+        aplicar_cargas_inerciales(masa_acumulada_por_nodo, a[0], a[1], a[2], solucion)
+
+        # Configurar y ejecutar el análisis
         ops.system('BandSPD')
         ops.numberer('RCM')
         ops.constraints('Plain')
@@ -347,45 +385,39 @@ def optimizador_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles,
         ops.analysis('Static')
         ops.analyze(1)
 
-        #Esta funcion grafica los desplzamientos en cada direccion por separado
-        #graficar_desplazamientos_inercia(elements, conexiones_paneles, escala=50)
+        graficar_desplazamientos_combinados_inercia(elements, conexiones_paneles, escala=100, titulo="Desplazamientos Inerciales "+a[3])
 
-        #Esta funcion grafica los desplazamientos en las tres direcciones combinados
-        graficar_desplazamientos_combinados_inercia(elements, conexiones_paneles, escala=100, titulo="Desplazamiento Inercial")
-
-        # Obtener reacciones en los apoyos
-        nodos_soporte = [1, 2, 3, 4]  # Asegúrate de que esta lista contenga los nodos correctos
-        obtener_reacciones_en_apoyos(nodos_soporte)
-
-        print("Fuerzas internas en cada barra:")
-        
         for element in elements:
             element_id, nodo_i, nodo_j = element
-            # Obtener la fuerza interna en el elemento
-            # Para elementos Truss, 'force' devuelve [N_i, N_j], donde N_i = -N_j
+
+            # Obtener la fuerza interna en la barra
             fuerzas = ops.eleResponse(element_id, 'axialForce')
-            # La fuerza axial es igual en magnitud y opuesta en dirección en ambos nodos
-            fuerza_axial = fuerzas[0]  # Tomamos la fuerza en el nodo i
-            if element_id not in fuerzas_barras:
-                fuerzas_barras[element_id] = fuerza_axial**2
+            fuerza_axial = fuerzas[0]  # Fuerza axial en el nodo i
+
+            # Almacenar la fuerza máxima para la barra
+            if element_id not in fuerzas_barras or abs(fuerza_axial) > abs(fuerzas_barras[element_id]):
+                fuerzas_barras[element_id] = fuerza_axial
+
+            if fuerza_axial not in fuerzas_maximas:
+                fuerzas_maximas[element_id] = fuerza_axial**2
+
             else:
-                fuerzas_barras[element_id] += fuerza_axial**2
-            
-        
-        # Resetear el estado del modelo antes del análisis térmico o para el siguiente analisis inercial
-        #ops.remove('loadPattern', 1)  # Si el patrón de carga inercial tiene tag 1
-        #ops.remove('loadPattern', 2)  # Si el patrón de carga inercial tiene tag 2
-        #ops.remove('loadPattern', 3)  # Si el patrón de carga inercial tiene tag 3
-        # Limpiar análisis anterior
+                fuerzas_maximas[element_id] += fuerza_axial**2
+
+        # Limpiar cargas y análisis para la siguiente iteración
         ops.remove('loadPattern', solucion)
         ops.wipeAnalysis()
 
         solucion += 1
-    
-    for barras in fuerzas_barras:
-        fuerzas_barras[barras] = np.sqrt(fuerzas_barras[barras])
 
-    return solucion, fuerzas_barras
+        # Graficar la estructura con las barras coloreadas al final
+        graficar_barras_coloreadas(elements, fuerzas_barras, titulo="Esfuerzos Internos Máximos en las Barras "+a[3])
+
+    #Saco la raiz cuadrada
+    for key in fuerzas_maximas:
+        fuerzas_maximas[key] = np.sqrt(fuerzas_maximas[key])
+
+    return solucion, fuerzas_maximas
 
 # --- Ejecución del Análisis ---
 def main():
@@ -421,10 +453,10 @@ def main():
     #Analisis Inercial
     #-----------------------------------------------------
     
-    solucion, fuerzas_barras = optimizador_inercial(masa_acumulada_por_nodo, elements, conexiones_paneles, solucion)
+    solucion, fuerzas_maximas = calculo_inercial(masa_acumulada_por_nodo, elements, conexiones_paneles, solucion)
 
     
-    print('\nLas fuerzas en las barras son\n',fuerzas_barras)
+    print('\nLas fuerzas en las barras son\n',fuerzas_maximas)
 
     #-----------------------------------------------------
     #Analisis Termico
@@ -432,17 +464,31 @@ def main():
 
 
     # Aplicar deformación térmica y realizar análisis
-    #variacion_termica(conexiones_paneles, elements, solucion)
+    variacion_termica(conexiones_paneles, elements, solucion)
     
-    #ops.system('BandSPD')
-    #ops.numberer('RCM')
-    #ops.constraints('Plain')
-    #ops.integrator('LoadControl', 1.0)
-    #ops.algorithm('Linear')
-    #ops.analysis('Static')
-    #ops.analyze(1)
+    ops.system('BandSPD')
+    ops.numberer('RCM')
+    ops.constraints('Plain')
+    ops.integrator('LoadControl', 1.0)
+    ops.algorithm('Linear')
+    ops.analysis('Static')
+    ops.analyze(1)
 
-    #graficar_desplazamientos_termicos(elements, conexiones_paneles, escala=100)
+    graficar_desplazamientos_termicos(elements, conexiones_paneles, escala=100)
+
+    fuerzas_barras = {}
+    for element in elements:
+            element_id, nodo_i, nodo_j = element
+
+            # Obtener la fuerza interna en la barra
+            fuerzas = ops.eleResponse(element_id, 'axialForce')
+            fuerza_axial = fuerzas[0]  # Fuerza axial en el nodo i
+
+            # Almacenar la fuerza máxima para la barra
+            if element_id not in fuerzas_barras or abs(fuerza_axial) > abs(fuerzas_barras[element_id]):
+                fuerzas_barras[element_id] = fuerza_axial
+
+    graficar_barras_coloreadas(elements, fuerzas_barras, titulo="Esfuerzos Internos en las Barras por Variación Térmica")
 
     masa_estructura = 0
     for masas in masa_acumulada_por_nodo.values():
