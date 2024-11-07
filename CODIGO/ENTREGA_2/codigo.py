@@ -169,15 +169,7 @@ def visualizar_estructura_rigida(nodos_paneles, plotter, color='green'):
 
 # --- Graficar Desplazamientos ---
 def graficar_desplazamientos_combinados_inercia(elements, conexiones_paneles, escala, titulo="Desplazamiento Combinado"):
-    """
-    Grafica la estructura original y desplazada con desplazamientos combinados en X, Y y Z.
-    
-    Parámetros:
-    - elements: Lista de elementos (element_id, nodo_i, nodo_j).
-    - conexiones_paneles: Lista de paneles definidos por sus nodos.
-    - escala: Factor de escala para amplificar los desplazamientos.
-    - titulo: Título del gráfico.
-    """
+ 
     plotter = pv.Plotter()
     nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
     node_tags = ops.getNodeTags()
@@ -269,9 +261,10 @@ def variacion_termica(conexiones_paneles, elements, solucion):
             par_nodos = frozenset({nodo_i, nodo_j})
 
             if par_nodos in nodos_previamente_cargados:
-                print('Ya se cargo la barra', nodo_j, nodo_i)
+                continue
     
             elif element_id is not None:
+      
                 E_element = E
                 A_element = A
                 force_thermal = E_element * A_element * thermal_strain
@@ -300,15 +293,7 @@ def obtener_reacciones_en_apoyos(nodos_soporte):
         print(f"Nodo {nodo}: Reacción Rx = {reacciones[0]:.2f}, Ry = {reacciones[1]:.2f}, Rz = {reacciones[2]:.2f}")
 
 def graficar_barras_coloreadas(elements, fuerzas_barras, titulo="Esfuerzos Internos en las Barras"):
-    """
-    Grafica la estructura original sin deformaciones, coloreando las barras según su fuerza interna.
-    
-    Parámetros:
-    - elements: Lista de elementos (element_id, nodo_i, nodo_j).
-    - fuerzas_barras: Diccionario con las fuerzas internas en las barras {element_id: fuerza}.
-    - titulo: Título del gráfico.
-    """
-    import pyvista as pv
+
     plotter = pv.Plotter()
     
     nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
@@ -329,15 +314,6 @@ def graficar_barras_coloreadas(elements, fuerzas_barras, titulo="Esfuerzos Inter
             color = 'black'  # Sin fuerza
         colors.append(color)
 
-    # Definir el rango de fuerzas para normalización
-    #fuerza_max = np.max(np.abs(fuerzas_barras.values()))
-    
-    #fuerzas_norm = np.array([fuerzas_barras.get(element_id, 0) / fuerza_max for element_id, _, _ in elements])
-    
-    # Crear un colormap que refleje el signo (por ejemplo, 'seismic')
-    #cmap = plt.get_cmap('seismic')
-    #colors = cmap((fuerzas_norm + 1) / 2)  # Ajustar al rango [0,1]
-    
     truss = pv.PolyData(nodes)
     truss.lines = np.hstack(lines)
     
@@ -358,6 +334,63 @@ def graficar_barras_coloreadas(elements, fuerzas_barras, titulo="Esfuerzos Inter
     plotter.show_axes()
     plotter.show()
 
+def graficar_barras_coloreadas_por_esfuerzo_maximo(elements, nodes, fuerzas_barras, titulo="Esfuerzos Internos Máximos en las Barras"):
+    """
+    Grafica la estructura original sin deformaciones, coloreando las barras según la magnitud de su esfuerzo interno.
+
+    Parámetros:
+    - elements: Lista de elementos (element_id, nodo_i, nodo_j).
+    - nodes: Array de coordenadas de los nodos.
+    - fuerzas_barras: Diccionario con las fuerzas internas máximas en las barras {element_id: fuerza}.
+    - titulo: Título del gráfico.
+    """
+    import pyvista as pv
+    import numpy as np
+
+    # Asegurarse de que 'nodes' es un array de numpy
+    nodes = np.array(nodes)
+
+    # Obtener las fuerzas originales (sin normalizar)
+    fuerzas = np.array([fuerzas_barras.get(element_id, 0) for element_id, _, _ in elements])
+
+    # Crear lista de líneas en el formato correcto
+    lines = []
+    for element in elements:
+        element_id, nodo_i, nodo_j = element
+        # Cada línea se define como [número de puntos, índice del nodo 1, índice del nodo 2]
+        # Restar 1 si los nodos están numerados desde 1
+        lines.extend([2, nodo_i - 1, nodo_j - 1])
+
+    # Convertir 'lines' a un array plano de tipo entero
+    lines = np.array(lines, dtype=np.int_)
+
+    # Crear el objeto PolyData
+    truss = pv.PolyData()
+    truss.points = nodes
+    truss.lines = lines
+
+    # Verificar que el número de celdas coincide con el número de fuerzas
+    assert truss.n_cells == len(fuerzas), f"Número de celdas ({truss.n_cells}) no coincide con el número de fuerzas ({len(fuerzas)})."
+
+    # Asignar las fuerzas como datos de las celdas (barras)
+    truss.cell_data['fuerzas'] = fuerzas
+
+    # Crear el plotter y añadir la malla
+    plotter = pv.Plotter()
+    plotter.add_mesh(truss, scalars='fuerzas', cmap='seismic', line_width=5, show_scalar_bar=True)
+    plotter.add_title(titulo, font_size=14)
+
+    # Agregar etiquetas de números de nodos (opcional)
+    node_tags = np.arange(1, len(nodes) + 1)
+    labels = [str(tag) for tag in node_tags]
+    plotter.add_point_labels(nodes, labels, point_size=5, font_size=12, text_color='black', name='labels')
+
+    plotter.show_axes()
+    plotter.show()
+
+
+
+
 
 def calculo_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles, solucion):
     
@@ -369,10 +402,6 @@ def calculo_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles, sol
     for a in aceleraciones:
         fuerzas_barras = {}
         
-
-        # Definir una aceleración en la dirección de la barra
-        
-
         # Aplicar cargas inerciales
         aplicar_cargas_inerciales(masa_acumulada_por_nodo, a[0], a[1], a[2], solucion)
 
@@ -386,6 +415,7 @@ def calculo_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles, sol
         ops.analyze(1)
 
         graficar_desplazamientos_combinados_inercia(elements, conexiones_paneles, escala=100, titulo="Desplazamientos Inerciales "+a[3])
+        obtener_reacciones_en_apoyos([1, 2, 3, 4])
 
         for element in elements:
             element_id, nodo_i, nodo_j = element
@@ -409,13 +439,13 @@ def calculo_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles, sol
         ops.wipeAnalysis()
 
         solucion += 1
-
+        
         # Graficar la estructura con las barras coloreadas al final
         graficar_barras_coloreadas(elements, fuerzas_barras, titulo="Esfuerzos Internos Máximos en las Barras "+a[3])
 
     #Saco la raiz cuadrada
     for key in fuerzas_maximas:
-        fuerzas_maximas[key] = np.sqrt(fuerzas_maximas[key])
+        fuerzas_maximas[key] = (fuerzas_maximas[key])**0.5
 
     return solucion, fuerzas_maximas
 
@@ -457,6 +487,13 @@ def main():
 
     
     print('\nLas fuerzas en las barras son\n',fuerzas_maximas)
+
+    nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
+    elements_barras = []
+    for eleTag in ops.getEleTags():
+        eleNodes = ops.eleNodes(eleTag)
+        elements_barras.append((eleTag, eleNodes[0], eleNodes[1]))
+    graficar_barras_coloreadas_por_esfuerzo_maximo(elements_barras, nodes, fuerzas_maximas, titulo="Esfuerzos Internos Máximos en las Barras")
 
     #-----------------------------------------------------
     #Analisis Termico
