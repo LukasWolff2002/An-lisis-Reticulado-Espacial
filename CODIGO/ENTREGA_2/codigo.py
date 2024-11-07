@@ -363,7 +363,7 @@ def optimizador_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles,
             element_id, nodo_i, nodo_j = element
             # Obtener la fuerza interna en el elemento
             # Para elementos Truss, 'force' devuelve [N_i, N_j], donde N_i = -N_j
-            fuerzas = ops.eleForce(element_id)
+            fuerzas = ops.eleResponse(element_id, 'axialForce')
             # La fuerza axial es igual en magnitud y opuesta en dirección en ambos nodos
             fuerza_axial = fuerzas[0]  # Tomamos la fuerza en el nodo i
             if element_id not in fuerzas_barras:
