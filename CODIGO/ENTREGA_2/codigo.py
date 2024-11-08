@@ -339,53 +339,85 @@ def graficar_barras_coloreadas(elements, fuerzas_barras, titulo, nodos_paneles):
     plotter.screenshot(filename='INFORME/GRAFICOS/'+titulo+' '+cruz, transparent_background=False)
 
 def graficar_barras_coloreadas_por_esfuerzo_maximo(elements, nodes, fuerzas_barras, titulo):
-    
-    import pyvista as pv
-    import numpy as np
+
+    plotter = pv.Plotter(window_size=[1920, 1080])
 
     # Asegurarse de que 'nodes' es un array de numpy
     nodes = np.array(nodes)
 
-    # Obtener las fuerzas originales (sin normalizar)
-    fuerzas = np.array([fuerzas_barras.get(element_id, 0) for element_id, _, _ in elements])
+    f_max = max(fuerzas_barras.values())
+    
+    #Ahora creo un diccionario con las fuerzas normalizadas
+    fuerzas_normalizadas = {}
 
-    # Crear lista de líneas en el formato correcto
+    for key in fuerzas_barras:
+        fuerzas_normalizadas[key] = fuerzas_barras[key]/(f_max)
+
+    # Crear lista de líneas y colores
     lines = []
+    colors = []
     for element in elements:
         element_id, nodo_i, nodo_j = element
-        # Cada línea se define como [número de puntos, índice del nodo 1, índice del nodo 2]
-        # Restar 1 si los nodos están numerados desde 1
-        lines.extend([2, nodo_i - 1, nodo_j - 1])
+        lines.append([2, nodo_i - 1, nodo_j - 1])
+        
+        fuerza_normalizada = fuerzas_normalizadas.get(element_id, 0)
+        
+        colors.append(255*fuerza_normalizada)
 
-    # Convertir 'lines' a un array plano de tipo entero
-    lines = np.array(lines, dtype=np.int_)
+    truss = pv.PolyData(nodes)
+    truss.lines = np.hstack(lines)
 
-    # Crear el objeto PolyData
-    truss = pv.PolyData()
-    truss.points = nodes
-    truss.lines = lines
+    # Añadir cada barra con su color correspondiente
+    for i, line in enumerate(truss.lines.reshape(-1, 3)):
+        start_idx = line[1]
+        end_idx = line[2]
+        points = nodes[[start_idx, end_idx]]
+        segment = pv.Line(points[0], points[1])
+        
+        # Determinar el color en la escala azul-verde-rojo
+        color_value = colors[i]
+        if color_value > 128:  # De verde a azul
+            green_component = int(255 - 2 * (color_value - 128))  # Decrece de 255 a 0
+            blue_component = int(2 * (color_value - 128))         # Aumenta de 0 a 255
+            color_rgb = [0, green_component, blue_component]
+        else:  # De rojo a verde
+            red_component = int(255 - 2 * color_value)            # Decrece de 255 a 0
+            green_component = int(2 * color_value)                # Aumenta de 0 a 255
+            color_rgb = [red_component, green_component, 0]
 
-    # Verificar que el número de celdas coincide con el número de fuerzas
-    assert truss.n_cells == len(fuerzas), f"Número de celdas ({truss.n_cells}) no coincide con el número de fuerzas ({len(fuerzas)})."
 
-    # Asignar las fuerzas como datos de las celdas (barras)
-    truss.cell_data['fuerzas'] = fuerzas
 
-    # Crear el plotter y añadir la malla
-    plotter = pv.Plotter(window_size=[1920, 1080])
-    plotter.add_mesh(truss, scalars='fuerzas', cmap='seismic', line_width=5, show_scalar_bar=True)
-    plotter.add_title(titulo, font_size=14)
-
+        plotter.add_mesh(segment, color=color_rgb, line_width=2)
+    
     # Agregar etiquetas de números de nodos (opcional)
-    node_tags = np.arange(1, len(nodes) + 1)
+    node_tags = ops.getNodeTags()
     labels = [str(tag) for tag in node_tags]
     plotter.add_point_labels(nodes, labels, point_size=5, font_size=12, text_color='black', name='labels')
+    #visualizar_estructura_rigida(nodos_paneles, plotter, color='gold')
+    plotter.add_text(titulo, position='upper_left', font_size=10)
+    plotter.add_legend([("Tension Maxima", "blue"), ("Tension Media", "green"),("Tension Minima", "red")])
+    
+    # Agregar la leyenda de la escala de colores en la parte inferior
+    # Agregar la barra de colores con el rango de valores de 0 a f_max
+    plotter.add_scalar_bar(title="Esfuerzo Interno Normalizado", 
+                        position_x=0.3, position_y=0.05, 
+                        width=0.4, height=0.05, 
+                        label_font_size=10, title_font_size=12, 
+                        n_labels=5)
 
-    plotter.show_axes()
-    plotter.show()
+    # Ajustar el rango de valores de la barra de colores
+    plotter.update_scalar_bar_range([0, f_max*100])
+
 
     
-    plotter.screenshot(filename='INFORME/GRAFICOS/'+titulo, transparent_background=False)
+    
+    plotter.show_axes()
+    plotter.show()
+    plotter.screenshot(filename='INFORME/GRAFICOS/'+titulo+' '+cruz, transparent_background=False)
+
+    
+    
+    
 
 
 def calculo_inercial (masa_acumulada_por_nodo, elements, conexiones_paneles, solucion, nodos_paneles):

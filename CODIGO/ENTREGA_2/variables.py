@@ -2,8 +2,8 @@ import numpy as np
 
 #Carbono
 E = 338e9 #GPa
-D1 = 0.0050 #m
-D2 = 0.002500 #m
+D1 = 0.0058 #m
+D2 = 0.002400 #m
 gamma = 1.91 #g/cm3
 gamma = gamma*1000 #kg/m3
 
@@ -23,7 +23,7 @@ alpha = 0.5e-6 #Coeficiente de dilatacion termica
 deltaT = 100
 
 #Variable para agregar barras centrales
-barras_centrales = True
+barras_centrales = False
 
 if barras_centrales:
         cruz = 'True'
