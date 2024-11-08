@@ -1,5 +1,11 @@
 \part{Entrega 2}
 
+\section{Introducción}
+
+En este informe, se llevará a cabo un análisis estructural de un enrejado de la entrega 1, considerando la sección transversal más grande estudiada (\(A_{30}\)). Se evaluarán dos configuraciones posibles para el enrejado: una con una diagonal en cada cara y otra con dos diagonales cruzadas en las caras laterales e interiores. El objetivo es analizar cómo las deformaciones y las fuerzas axiales de las barras se comportan bajo diferentes condiciones de carga, específicamente con una aceleración de 0.1g en los tres ejes y un aumento de temperatura de 100°C en los nodos.
+
+El análisis se dividirá en dos partes. En la primera, se analizarán las deformaciones y las fuerzas axiales en función de las condiciones de aceleración y temperatura, mostrando las deformaciones y la distribución de las fuerzas axiales para cada caso. En la segunda parte, se estudiará la "peor dirección" de aceleración, entendida como la dirección en la que se maximiza o minimiza la carga axial en las barras, considerando que la aceleración puede ser en cualquier dirección en el espacio 3D.
+
 \section{Resultados}
 
 \subsection{Parte 1}
@@ -150,12 +156,26 @@ Para esta sección se seleccionó un reticulado de 16 vanos para una mejor visua
     \end{minipage}
 \end{figure}
 
+\subsection{Parte 2}
 
+En este caso se considerara que la aceleración del satélite de \(0.1 \, g\) puede ocurrir en cualquier dirección en el espacio 3D. Cada barra del reticulado tiene una "peor dirección" de aceleración, es decir, la dirección en la que se maximiza o minimiza su fuerza axial. El objetivo de esta sección es calcular las cargas axiales máximas y mínimas que cada barra debe resistir, considerando que la dirección de aceleración es arbitraria en tres dimensiones.
 
+\subsubsection{Esfuerzos internos maximos de las barras}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{GRAFICOS/Esfuerzos Internos Máximos en las Barras False False.png}
+    \caption{Esfuerzos internos máximos en las barras.}
+    \label{fig:imagen9}
+\end{figure}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{GRAFICOS/Esfuerzos Internos Máximos en las Barras True True.png}
+    \caption{Esfuerzos internos máximos en las barras.}
+    \label{fig:imagen99}
+\end{figure}
 
+En las figuras \ref{fig:imagen9} y \ref{fig:imagen99}, se observa que las tensiones más altas ocurren en las barras diagonales cercanas a los paneles, ya que estas barras soportan la mayor parte de la carga de la estructura. Las barras horizontales y verticales, por su parte, muestran tensiones más bajas, indicando que su función principal es estabilizar la estructura en lugar de soportar grandes fuerzas.
 
-
-
-
+Las tensiones se ve que disminuyen a medida que se alejan de la estructura de anclaje, lo que sugiere que las cargas se distribuyen y se disipan a medida que se aleja de esta. Lo que podria sugerir que de ser necesario se deban reforzar las barras del comienzo de la estructura.
