@@ -11,7 +11,7 @@ D1_Small, D2_Small, A_Small = 0.0058, 0.0024, None
 D1_Medium, D2_Medium, A_Medium = 0.008, 0.004, None
 D1_Large, D2_Large, A_Large = 0.010, 0.006, None
 ancho_barras, alto_barras, largo_inicial_barras = 1, 1, 7
-largo_barras, espaciamiento = 10, 5
+largo_barras, espaciamiento = 100, 20
 alpha_1, alpha_2, alpha_3, alpha_4, alpha_5, alpha_6, alpha_7, alpha_8 = 0, 0, 0, 0, 0, 0,0, 0
 nodos_barra_1, nodos_barra_2, nodos_barra_3, nodos_barra_4, nodos_barra_5, nodos_barra_6, nodos_barra_7, nodos_barra_8 = [], [], [], [], [], [], [], []
 barras = []
@@ -435,7 +435,7 @@ def main():
 
 
 
-    altura_torre = 50
+    altura_torre = 20
     espaciaqdo_torre = 5
 
     for i in range(int(altura_torre/espaciaqdo_torre)):
@@ -463,34 +463,133 @@ def main():
 
     #Bien, ahora debo conetar la torre a los brazos
 
-    #La mitad de la barra sin contar el espacio inicial es
-    mitad_barra = int((round(((len(nodos_barra_1)-1)/2),0)))
-    mitad_torre = int((round(((len(nodos_torre_1)-1)/2),0)))
     
-    #Conecto las mitadas
-    for i in range(4):
-        ops.element('Truss', barra_actual, nodos_barra_1[mitad_barra][0], nodos_torre_1[mitad_torre][0], A_Small, 1, '-rho', gamma_fibra_carbono)
-        barras.append([barra_actual, nodos_barra_1[mitad_barra][0], nodos_torre_1[mitad_torre][0]])
-        barra_actual += 1
-        ops.element('Truss', barra_actual, nodos_barra_1[-1][0], nodos_torre_1[-1][0], A_Small, 1, '-rho', gamma_fibra_carbono)
-        barras.append([barra_actual, nodos_barra_1[-1][0], nodos_torre_1[-1][0]])
-        barra_actual += 1
-        ops.element('Truss', barra_actual, nodos_barra_8[mitad_barra][0], nodos_torre_1[mitad_torre][0], A_Small, 1, '-rho', gamma_fibra_carbono)
-        barras.append([barra_actual, nodos_barra_8[mitad_barra][0], nodos_torre_1[mitad_torre][0]])
-        barra_actual += 1
-        ops.element('Truss', barra_actual, nodos_barra_8[-1][0], nodos_torre_1[-1][0], A_Small, 1, '-rho', gamma_fibra_carbono)
-        barras.append([barra_actual, nodos_barra_8[-1][0], nodos_torre_1[-1][0]])
-        barra_actual += 1
-        ops.element('Truss', barra_actual, nodos_barra_2[mitad_barra][0], nodos_torre_1[mitad_torre][0], A_Small, 1, '-rho', gamma_fibra_carbono)
-        barras.append([barra_actual, nodos_barra_2[mitad_barra][0], nodos_torre_1[mitad_torre][0]])
-        barra_actual += 1
-        ops.element('Truss', barra_actual, nodos_barra_2[-1][0], nodos_torre_1[-1][0], A_Small, 1, '-rho', gamma_fibra_carbono)
-        barras.append([barra_actual, nodos_barra_2[-1][0], nodos_torre_1[-1][0]])
-        barra_actual += 1
+    
+    def conectar_mitades_torre_con_barras(torre, barras_grupo, A_Small, gamma_fibra_carbono):
+
+        global barra_actual, barras
+
+        # La mitad de la barra sin contar el espacio inicial
+        mitad_barra = int(round((len(barras_grupo[0]) - 1) / 2, 0))
+        mitad_torre = int(round((len(torre) - 1) / 2, 0))
+
+        for esquina, barra_set in enumerate(barras_grupo):
+            for barra in barra_set:
+                # Conectar nodo de mitad de la barra con el nodo de mitad de la torre
+                ops.element('Truss', barra_actual, barra[mitad_barra][0], torre[mitad_torre][esquina], A_Small, 1, '-rho', gamma_fibra_carbono)
+                barras.append([barra_actual, barra[mitad_barra][0], torre[mitad_torre][esquina]])
+                barra_actual += 1
+
+                # Conectar nodo final de la barra con el nodo final de la torre
+                ops.element('Truss', barra_actual, barra[-1][0], torre[-1][esquina], A_Small, 1, '-rho', gamma_fibra_carbono)
+                barras.append([barra_actual, barra[-1][0], torre[-1][esquina]])
+                barra_actual += 1
+
+    # Ejemplo de uso:
+    barras_grupo_1 = [nodos_barra_8, nodos_barra_1, nodos_barra_2]  # Barras para la primera esquina
+    barras_grupo_2 = [nodos_barra_2, nodos_barra_3, nodos_barra_4]  # Barras para la segunda esquina
+    barras_grupo_3 = [nodos_barra_4, nodos_barra_5, nodos_barra_6]  # Barras para la tercera esquina
+    barras_grupo_4 = [nodos_barra_6, nodos_barra_7, nodos_barra_8]  # Barras para la cuarta esquina
+
+    # Conectar cada esquina con sus barras correspondientes
+    conectar_mitades_torre_con_barras(nodos_torre_1, [barras_grupo_1, barras_grupo_2, barras_grupo_3, barras_grupo_4], A_Small, gamma_fibra_carbono)
+
+
+
+    #Para hacer barras que unan puntos de los nodos
+    #Se que quiero unir en el extremo final la barra 1 con 2
+    #Los nodos a unir son
+    nodo_1 = nodos_barra_1[-1][1]
+    nodo_2 = nodos_barra_2[-1][2]
+
+    coordenadas_1 = ops.nodeCoord(nodo_1)
+    coordenadas_2 = ops.nodeCoord(nodo_2)
+
+    print(f'Las coordenadas del nodo 1 son: {coordenadas_1}')
+    print(f'Las coordenadas del nodo 2 son: {coordenadas_2}')
+
+    
+
+    def conectar_barras(barra_1, barra_2, num_nodos_intermedios, nodos_barra_nueva, desfase_z=1, desfase_transversal=1):
+        global nodo_actual
+
+        # Obtener los nodos inicial y final de las barras
+        nodo_inicial = barra_1[-1][1]
+        nodo_final = barra_2[-1][2]
+        
+        # Obtener coordenadas de los nodos inicial y final
+        coord_inicial = np.array(ops.nodeCoord(nodo_inicial))
+        coord_final = np.array(ops.nodeCoord(nodo_final))
+        
+        # Calcular el incremento en cada dirección
+        delta = (coord_final - coord_inicial) / (num_nodos_intermedios + 1)
+        
+        # Calcular el vector perpendicular para el desfase transversal
+        direccion = coord_final - coord_inicial
+        perpendicular = np.array([-direccion[1], direccion[0], 0])  # Perpendicular en el plano XY
+        perpendicular = perpendicular / np.linalg.norm(perpendicular)  # Normalizar
+        
+        # Crear nodos intermedios
+        for i in range(1, num_nodos_intermedios + 1):
+            # Coordenadas del nodo intermedio sin desfases
+            coord_nodo = coord_inicial + i * delta
+            
+            # Aplicar el desfase en z y el desfase transversal
+            coord_nodo_desfasado_z = coord_nodo + np.array([0, 0, desfase_z]) 
+            coord_nodo_desfazado_lat = coord_nodo + perpendicular * desfase_transversal
+            cooed_nodo_desfasado_lat_2 = coord_nodo - perpendicular * desfase_transversal
+            
+            print('----------------')
+            print(i)
+            print(f'Coordenadas del nodo original: {coord_nodo}')
+            print(f'Coordenadas del nodo desfasado: {coord_nodo_desfasado_z}')
+            print(f'Coordenadas del nodo desfasado lateral: {coord_nodo_desfazado_lat}')
+            
+            # Crear el nodo en OpenSees
+            nodo_actual += 1
+            ops.node(nodo_actual, *coord_nodo_desfasado_z)
+            nodo_actual += 1
+            ops.node(nodo_actual, *coord_nodo_desfazado_lat)
+            nodo_actual += 1
+            ops.node(nodo_actual, *cooed_nodo_desfasado_lat_2)
+
+            nodos_barra_nueva.append([nodo_actual - 2, nodo_actual - 1, nodo_actual])
+
+            #Conecto el nodo inicio con los primeros nodos
+            if i == 1:
+                for a in range(len(nodos_barra_nueva[-1])):
+                    generar_elemento_axial(nodo_inicial, nodos_barra_nueva[-1][a])
+
+            for a in range(len(nodos_barra_nueva[-1])):
+                j = (i + a) % len(nodos_barra_nueva[-1])
+                generar_elemento_axial(nodos_barra_nueva[-1][a], nodos_barra_nueva[-1][j])
+
+            if len(nodos_barra_nueva) > 1:
+                print('Conecto capas')
+                conectar_capas(nodos_barra_nueva[-1], nodos_barra_nueva[-2])
+
+        # Conectar el último nodo intermedio con el nodo final
+        for a in range(len(nodos_barra_nueva[-1])):
+            generar_elemento_axial(nodos_barra_nueva[-1][a], nodo_final)
+
+            
+
+
+    nodos_barra_1_2 = []
+    conectar_barras(nodos_barra_1, nodos_barra_2, 10, nodos_barra_1_2)
+
+
+
+    
+
+
+
+
 
 
 
         
+
 
 
 
@@ -510,7 +609,7 @@ def main():
     masa_barras = sum(masa_acumulada_por_nodo.values())
     area_paneles, masa_paneles = acumular_masa_paneles()
     print(f'los paneles tienen un area total de {area_paneles} y una masa total de {masa_paneles}')
-    if area_paneles < 3333333.333:
+    if area_paneles < 3333.33333:
         print('El area de los paneles es menor a 3333333.333')
 
     print(f'La masa total de las barras es: {masa_barras}')
