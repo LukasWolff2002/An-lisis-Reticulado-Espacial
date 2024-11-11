@@ -3,21 +3,29 @@ import openseespy.opensees as ops
 import pyvista as pv
 from math import atan
 
+#La torre me sube la frecuencia
+#Que pasa si en vez de una barra, conecto como reticulado
+
+
 # Declaración de variables globales
 nodo_actual, barra_actual = 0, 0
 gamma_fibra_carbono = 1.91 * 1000
 E_fibra_carbono = 338e9
-D1_Small, D2_Small, A_Small = 0.0058, 0.0024, None
+gamma_panel = 1.1
+D1_Rope, D2_Rope, A_Rope = 0.01, 0.0005, None
+D1_Small, D2_Small, A_Small = 0.50, 0.49, None
 D1_Medium, D2_Medium, A_Medium = 0.008, 0.004, None
 D1_Large, D2_Large, A_Large = 0.010, 0.006, None
-ancho_barras, alto_barras, largo_inicial_barras = 1, 1, 7
-largo_barras, espaciamiento = 100, 20
+ancho_barras, alto_barras, largo_inicial_barras = 4, 2, 6
+largo_barras, espaciamiento = 120, 12
 alpha_1, alpha_2, alpha_3, alpha_4, alpha_5, alpha_6, alpha_7, alpha_8 = 0, 0, 0, 0, 0, 0,0, 0
 nodos_barra_1, nodos_barra_2, nodos_barra_3, nodos_barra_4, nodos_barra_5, nodos_barra_6, nodos_barra_7, nodos_barra_8 = [], [], [], [], [], [], [], []
 barras = []
 conexiones_paneles = []
 masa_acumulada_por_nodo = {}
-nodos_torre_1 = []
+nodos_torre_1, nodos_torre_2 = [], []
+altura_torre, espaciado_torre = 10, 5
+  
 
 def inicializar_modelo():
     ops.wipe()
@@ -59,10 +67,17 @@ def angulos_barras():
     alpha_7 = 270
     alpha_8 = alpha_6 + np.degrees(2 * atan(1.65 / 1.95))
 
-def generar_elemento_axial(nodo_1, nodo_2):
-    global barra_actual, A_Small, gamma_fibra_carbono
-    ops.element('Truss', barra_actual, nodo_1, nodo_2, A_Small, 1, '-rho', gamma_fibra_carbono)
-    barras.append([barra_actual, nodo_1, nodo_2])
+def generar_elemento_axial(nodo_1, nodo_2, Tamaño):
+    global barra_actual, A_Small, A_Medium, A_Large, gamma_fibra_carbono
+    if Tamaño == 'S':
+        ops.element('Truss', barra_actual, nodo_1, nodo_2, A_Small, 1, '-rho', gamma_fibra_carbono)
+        barras.append([barra_actual, nodo_1, nodo_2, 'S'])
+    elif Tamaño == 'M':
+        ops.element('Truss', barra_actual, nodo_1, nodo_2, A_Medium, 1, '-rho', gamma_fibra_carbono)
+        barras.append([barra_actual, nodo_1, nodo_2])
+    elif Tamaño == 'L':
+        ops.element('Truss', barra_actual, nodo_1, nodo_2, A_Large, 1, '-rho', gamma_fibra_carbono)
+        barras.append([barra_actual, nodo_1, nodo_2])
     barra_actual += 1
 
 def coordenadas_cartesianas(largo, angulo_xy, altura_z):
@@ -101,7 +116,10 @@ def nodos_apoyos (nodos_apoyo, nodos_barra):
         nodo_actual += 1
         ops.node(nodo_actual, float(n[0]), float(n[1]), float(n[2]))
         #Dejo fijo el nodo
-        ops.fix(nodo_actual, 1, 1, 1)
+        if i == 0:
+            ops.fix(nodo_actual, 1, 1, 1) #liberar z no cambia mucho el modelo
+        else:
+            ops.fix(nodo_actual, 1, 1, 1)
 
     nodos_barra.append([nodo_actual - 2, nodo_actual - 1, nodo_actual])
 
@@ -157,7 +175,7 @@ def visualizar_caja_satelite(caras_caja, barras, conexiones_paneles):
     
     # Agregar etiquetas con el número de nodo en cada punto y hacerlas siempre visibles
     labels = {i + 1: str(tag) for i, tag in enumerate(node_tags)}
-    plotter.add_point_labels(points, labels, font_size=0, text_color="red", always_visible=True)
+    plotter.add_point_labels(points, labels, font_size=10, text_color="red", always_visible=True)
 
     # Visualizar las caras de la caja satélite como paneles
     visualizar_panel(caras_caja, plotter, color='blue')
@@ -251,11 +269,11 @@ def area_cuatro_nodos_por_numero(nodo1, nodo2, nodo3, nodo4):
 def acumular_masa_paneles():
     area_total = 0
     masa_total = 0
-    global masa_acumulada_por_nodo, conexiones_paneles
+    global masa_acumulada_por_nodo, conexiones_paneles, gamma_panel
     for nodos_conectados in conexiones_paneles:
         area_panel = area_cuatro_nodos_por_numero(*nodos_conectados)
         area_total += area_panel
-        masa_panel = area_panel * 1.1
+        masa_panel = area_panel * gamma_panel
         masa_total += masa_panel
         masa_por_panel = masa_panel / 4
         for nodo in nodos_conectados:
@@ -298,15 +316,17 @@ def nodos_paneles(nodos_barra_A, nodos_barra_B):
         conexiones_paneles.append([nodos_barra_A[j][0], nodos_barra_B[j][0], nodos_barra_B[j+1][0], nodos_barra_A[j+1][0]])
 
 def main():
-    global gamma_fibra_carbono, E_fibra_carbono, A_Small, A_Medium, A_Large
-    global D1_Small, D2_Small, D1_Medium, D2_Medium, D1_Large, D2_Large
+    global gamma_fibra_carbono, E_fibra_carbono, A_Rope, A_Small, A_Medium, A_Large
+    global D1_Rope, D1_Rope, D1_Small, D2_Small, D1_Medium, D2_Medium, D1_Large, D2_Large
     global nodos_barra_1, nodos_barra_2, nodos_barra_3, nodos_barra_4, barras
     global largo_barras, espaciamiento, conexiones_paneles, nodo_actual, barra_actual
+    global altura_torre, espaciado_torre, nodos_torre_1, nodos_torre_2
 
     inicializar_modelo()
 
     definir_material(material_id=1, E=E_fibra_carbono)
 
+    A_Rope = definir_seccion_tubo(D1=D1_Rope, D2=D2_Rope)
     A_Small = definir_seccion_tubo( D1=D1_Small, D2=D2_Small)
     A_Medium = definir_seccion_tubo(D1=D1_Medium, D2=D2_Medium)
     A_Large = definir_seccion_tubo(D1=D1_Large, D2=D2_Large)
@@ -418,70 +438,119 @@ def main():
     #Genero la torre 
     #--------------------------------------------
 
-    nodos_base_torre = np.array([
+    nodos_base_torre_1 = np.array([
         [1, 0, 1.3],
         [0, 1, 1.3],
         [-1, 0, 1.3],
         [0, -1, 1.3]
     ])
 
-    for i in range(len(nodos_base_torre)):
-        x, y, z = nodos_base_torre[i]
+    for i in range(len(nodos_base_torre_1)):
+        x, y, z = nodos_base_torre_1[i]
+        nodo_actual += 1
+        ops.node(nodo_actual, x, y, z)
+        ops.fix(nodo_actual, 1, 1, 1)
+
+    nodos_torre_1 = [[nodo_actual - 3, nodo_actual - 2, nodo_actual - 1, nodo_actual]]
+
+    nodos_base_torre_2 = np.array([
+        [1, 0, -1.3],
+        [0, 1, -1.3],
+        [-1, 0, -1.3],
+        [0, -1, -1.3]
+    ])
+
+    for i in range(len(nodos_base_torre_2)):
+        x, y, z = nodos_base_torre_2[i]
         nodo_actual += 1
         ops.node(nodo_actual, x, y, z)
         ops.fix(nodo_actual, 1, 1, 1)
         
-    nodos_torre_1 = [[nodo_actual - 3, nodo_actual - 2, nodo_actual - 1, nodo_actual]]
-
-
-
-    altura_torre = 20
-    espaciaqdo_torre = 5
-
-    for i in range(int(altura_torre/espaciaqdo_torre)):
-        #gnero siguiente capa de altura
-        altura = (i+1)*espaciaqdo_torre
-        nodos_nuevos = [[1, 0, altura], [0, 1, altura], [-1, 0, altura], [0, -1, altura]]
     
-        nodo_actual += 1
-        ops.node(nodo_actual, 1, 0, altura)
-        nodo_actual += 1
-        ops.node(nodo_actual, 0, 1, altura)
-        nodo_actual += 1
-        ops.node(nodo_actual, -1, 0, altura)
-        nodo_actual += 1
-        ops.node(nodo_actual, 0, -1, altura)
+    nodos_torre_2 = [[nodo_actual - 3, nodo_actual - 2, nodo_actual - 1, nodo_actual]]
 
-        nodos_torre_1.append([nodo_actual - 3, nodo_actual - 2, nodo_actual - 1, nodo_actual])
 
-        for i in range(len(nodos_torre_1[-1])):
-            j = (i + 1) % len(nodos_torre_1[-1])
-            generar_elemento_axial(nodos_torre_1[-1][i], nodos_torre_1[-1][j])
 
-        #Ahora conecto las capas
-        conectar_capas(nodos_torre_1[-2], nodos_torre_1[-1])
+   
+
+    def generar_torre(nodos_torre, up):
+        global nodo_actual, barra_actual, A_Small, gamma_fibra_carbono, altura_torre, espaciado_torre
+
+
+        for i in range(int(altura_torre/espaciado_torre)):
+            #gnero siguiente capa de altura
+            print('------------------')
+            print(i)
+        
+            if up:
+                a = 1
+        
+            else:
+                a =-1
+                
+            altura = a*(i+1)*espaciado_torre
+        
+            nodo_actual += 1
+            ops.node(nodo_actual, 1, 0, altura)
+            nodo_actual += 1
+            ops.node(nodo_actual, 0, 1, altura)
+            nodo_actual += 1
+            ops.node(nodo_actual, -1, 0, altura)
+            nodo_actual += 1
+            ops.node(nodo_actual, 0, -1, altura)
+
+            nodos_torre.append([nodo_actual - 3, nodo_actual - 2, nodo_actual - 1, nodo_actual])
+
+            for b in range(len(nodos_torre[-1])):
+                j = (b + 1) % len(nodos_torre[-1])
+                generar_elemento_axial(nodos_torre[-1][b], nodos_torre[-1][j])
+
+            #Ahora conecto las capas
+            conectar_capas(nodos_torre[-2], nodos_torre[-1])
+
+        #Ahora agrego las conexiones x en las capas
+        for i in range(len(nodos_torre)):
+            if i != 0:
+                ops.element('Truss', barra_actual, nodos_torre[i][0], nodos_torre[i][2], A_Small, 1, '-rho', gamma_fibra_carbono)
+                barras.append([barra_actual, nodos_torre[i][0], nodos_torre[i][2]])
+                barra_actual += 1
+                ops.element('Truss', barra_actual, nodos_torre[i][1], nodos_torre[i][3], A_Small, 1, '-rho', gamma_fibra_carbono)
+                barras.append([barra_actual, nodos_torre[i][1], nodos_torre[i][3]])
+                barra_actual += 1
+
+        return nodos_torre
+        
+    nodos_torre_1 = generar_torre(nodos_torre_1, True)
+    #nodos_torre_2 = generar_torre(nodos_torre_2, False)
+
+
+    
 
     #Bien, ahora debo conetar la torre a los brazos
 
     
     
-    def conectar_mitades_torre_con_barras(torre, barras_grupo, A_Small, gamma_fibra_carbono):
+    def conectar_mitades_torre_con_barras(torre, barras_grupo, gamma_fibra_carbono):
 
-        global barra_actual, barras
+        global barra_actual, barras, A_Rope
 
         # La mitad de la barra sin contar el espacio inicial
-        mitad_barra = int(round((len(barras_grupo[0]) - 1) / 2, 0))
-        mitad_torre = int(round((len(torre) - 1) / 2, 0))
+        mitad_barra = int(round((len(barras_grupo[0][0])) / 2, 0)) 
+        print('la mitad de la barra es:', mitad_barra)
+        mitad_torre = int(round((len(torre) - 1) / 2, 0)) 
+
+        
 
         for esquina, barra_set in enumerate(barras_grupo):
+            print(mitad_barra)
             for barra in barra_set:
                 # Conectar nodo de mitad de la barra con el nodo de mitad de la torre
-                ops.element('Truss', barra_actual, barra[mitad_barra][0], torre[mitad_torre][esquina], A_Small, 1, '-rho', gamma_fibra_carbono)
+                ops.element('Truss', barra_actual, barra[mitad_barra][0], torre[mitad_torre][esquina], A_Rope, 1, '-rho', gamma_fibra_carbono)
                 barras.append([barra_actual, barra[mitad_barra][0], torre[mitad_torre][esquina]])
                 barra_actual += 1
 
                 # Conectar nodo final de la barra con el nodo final de la torre
-                ops.element('Truss', barra_actual, barra[-1][0], torre[-1][esquina], A_Small, 1, '-rho', gamma_fibra_carbono)
+                ops.element('Truss', barra_actual, barra[-1][0], torre[-1][esquina], A_Rope, 1, '-rho', gamma_fibra_carbono)
                 barras.append([barra_actual, barra[-1][0], torre[-1][esquina]])
                 barra_actual += 1
 
@@ -492,30 +561,21 @@ def main():
     barras_grupo_4 = [nodos_barra_6, nodos_barra_7, nodos_barra_8]  # Barras para la cuarta esquina
 
     # Conectar cada esquina con sus barras correspondientes
-    conectar_mitades_torre_con_barras(nodos_torre_1, [barras_grupo_1, barras_grupo_2, barras_grupo_3, barras_grupo_4], A_Small, gamma_fibra_carbono)
+    #conectar_mitades_torre_con_barras(nodos_torre_1, [barras_grupo_1, barras_grupo_2, barras_grupo_3, barras_grupo_4], gamma_fibra_carbono)
+    #conectar_mitades_torre_con_barras(nodos_torre_2, [barras_grupo_1, barras_grupo_2, barras_grupo_3, barras_grupo_4], A_Small, gamma_fibra_carbono)
 
 
 
-    #Para hacer barras que unan puntos de los nodos
-    #Se que quiero unir en el extremo final la barra 1 con 2
-    #Los nodos a unir son
-    nodo_1 = nodos_barra_1[-1][1]
-    nodo_2 = nodos_barra_2[-1][2]
 
-    coordenadas_1 = ops.nodeCoord(nodo_1)
-    coordenadas_2 = ops.nodeCoord(nodo_2)
 
-    print(f'Las coordenadas del nodo 1 son: {coordenadas_1}')
-    print(f'Las coordenadas del nodo 2 son: {coordenadas_2}')
-
-    
-
-    def conectar_barras(barra_1, barra_2, num_nodos_intermedios, nodos_barra_nueva, desfase_z=1, desfase_transversal=1):
+    def conectar_barras(barra_1, nodo_1, barra_2,nodo_2, num_nodos_intermedios, nodos_barra_nueva, desfase_z=2, desfase_transversal=1):
         global nodo_actual
 
         # Obtener los nodos inicial y final de las barras
-        nodo_inicial = barra_1[-1][1]
-        nodo_final = barra_2[-1][2]
+        #nodo_inicial = barra_1[3][1]
+        nodo_inicial = barra_1[nodo_1][0]
+        nodo_final = barra_2[-1][nodo_2]
+        #Antes nodo 1 era 2
         
         # Obtener coordenadas de los nodos inicial y final
         coord_inicial = np.array(ops.nodeCoord(nodo_inicial))
@@ -539,12 +599,7 @@ def main():
             coord_nodo_desfazado_lat = coord_nodo + perpendicular * desfase_transversal
             cooed_nodo_desfasado_lat_2 = coord_nodo - perpendicular * desfase_transversal
             
-            print('----------------')
-            print(i)
-            print(f'Coordenadas del nodo original: {coord_nodo}')
-            print(f'Coordenadas del nodo desfasado: {coord_nodo_desfasado_z}')
-            print(f'Coordenadas del nodo desfasado lateral: {coord_nodo_desfazado_lat}')
-            
+    
             # Crear el nodo en OpenSees
             nodo_actual += 1
             ops.node(nodo_actual, *coord_nodo_desfasado_z)
@@ -561,11 +616,12 @@ def main():
                     generar_elemento_axial(nodo_inicial, nodos_barra_nueva[-1][a])
 
             for a in range(len(nodos_barra_nueva[-1])):
-                j = (i + a) % len(nodos_barra_nueva[-1])
+     
+                j = (a + 1) % len(nodos_barra_nueva[-1])
                 generar_elemento_axial(nodos_barra_nueva[-1][a], nodos_barra_nueva[-1][j])
 
             if len(nodos_barra_nueva) > 1:
-                print('Conecto capas')
+               
                 conectar_capas(nodos_barra_nueva[-1], nodos_barra_nueva[-2])
 
         # Conectar el último nodo intermedio con el nodo final
@@ -576,7 +632,27 @@ def main():
 
 
     nodos_barra_1_2 = []
-    conectar_barras(nodos_barra_1, nodos_barra_2, 10, nodos_barra_1_2)
+    nodos_barra_2_3 = []
+    nodos_barra_3_4 = []
+    nodos_barra_4_5 = []
+    nodos_barra_5_6 = []
+    nodos_barra_6_7 = []
+    nodos_barra_7_8 = []
+    nodos_barra_8_1 = []
+    
+    #conectar_barras(nodos_barra_5, -1, nodos_torre_1, 2, 10, nodos_barra_1_2)
+    #conectar_barras(nodos_barra_7, -1, nodos_torre_1, 3, 10, nodos_barra_2_3)
+    #conectar_barras(nodos_barra_1, -1, nodos_torre_1, 0, 10, nodos_barra_3_4)
+    #conectar_barras(nodos_barra_3, -1, nodos_torre_1, 1, 10, nodos_barra_4_5)
+
+    #conectar_barras(nodos_barra_1, nodos_barra_2, 3, nodos_barra_1_2)
+    #conectar_barras(nodos_barra_2, nodos_barra_3, 3, nodos_barra_2_3)
+    #conectar_barras(nodos_barra_3, nodos_barra_4, 3, nodos_barra_3_4)
+    #conectar_barras(nodos_barra_4, nodos_barra_5, 3, nodos_barra_4_5)
+    #conectar_barras(nodos_barra_5, nodos_barra_6, 3, nodos_barra_5_6)
+    #conectar_barras(nodos_barra_6, nodos_barra_7, 3, nodos_barra_6_7)
+    #conectar_barras(nodos_barra_7, nodos_barra_8, 3, nodos_barra_7_8)
+    #conectar_barras(nodos_barra_8, nodos_barra_1, 3, nodos_barra_8_1)
 
 
 
@@ -623,11 +699,11 @@ def main():
     def realizar_analisis_frecuencias(num_modes):
         eigenvalues = ops.eigen(num_modes)
         eigenfrequencies = np.sqrt((eigenvalues)) / (2 * np.pi)
-        print(f'Frecuencias naturales: {eigenfrequencies} Hz')
+        print(f'La frecuencia natural mas baja es: {eigenfrequencies} Hz')
         return eigenfrequencies
 
     eigenfrequencies = realizar_analisis_frecuencias(num_modes=10)
-    print(eigenfrequencies)
+    
 
    
 
