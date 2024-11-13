@@ -13,10 +13,10 @@ gamma_fibra_carbono = 1.91 * 1000
 E_fibra_carbono = 338e9
 gamma_panel = 1.1
 D1_Rope, D2_Rope, A_Rope = 0.01, 0.0005, None
-D1_Small, D2_Small, A_Small = 0.50, 0.49, None
+D1_Small, D2_Small, A_Small = 0.05, 0.045, None
 D1_Medium, D2_Medium, A_Medium = 0.008, 0.004, None
 D1_Large, D2_Large, A_Large = 0.010, 0.006, None
-ancho_barras, alto_barras, largo_inicial_barras = 4, 2, 6
+ancho_barras, alto_barras, largo_inicial_barras = 1, 2, 6
 largo_barras, espaciamiento = 120, 12
 alpha_1, alpha_2, alpha_3, alpha_4, alpha_5, alpha_6, alpha_7, alpha_8 = 0, 0, 0, 0, 0, 0,0, 0
 nodos_barra_1, nodos_barra_2, nodos_barra_3, nodos_barra_4, nodos_barra_5, nodos_barra_6, nodos_barra_7, nodos_barra_8 = [], [], [], [], [], [], [], []
@@ -24,7 +24,7 @@ barras = []
 conexiones_paneles = []
 masa_acumulada_por_nodo = {}
 nodos_torre_1, nodos_torre_2 = [], []
-altura_torre, espaciado_torre = 10, 5
+altura_torre, espaciado_torre = 20, 5
   
 
 def inicializar_modelo():
@@ -74,10 +74,10 @@ def generar_elemento_axial(nodo_1, nodo_2, Tamaño):
         barras.append([barra_actual, nodo_1, nodo_2, 'S'])
     elif Tamaño == 'M':
         ops.element('Truss', barra_actual, nodo_1, nodo_2, A_Medium, 1, '-rho', gamma_fibra_carbono)
-        barras.append([barra_actual, nodo_1, nodo_2])
+        barras.append([barra_actual, nodo_1, nodo_2, 'M'])
     elif Tamaño == 'L':
         ops.element('Truss', barra_actual, nodo_1, nodo_2, A_Large, 1, '-rho', gamma_fibra_carbono)
-        barras.append([barra_actual, nodo_1, nodo_2])
+        barras.append([barra_actual, nodo_1, nodo_2, 'L'])
     barra_actual += 1
 
 def coordenadas_cartesianas(largo, angulo_xy, altura_z):
@@ -125,7 +125,7 @@ def nodos_apoyos (nodos_apoyo, nodos_barra):
 
 def nodos_base_barras(nodos_iniciales_barra, nodos_barra, alpha):
     global nodo_actual, barra_actual, ancho_barras, alto_barras, largo_inicial_barras
-    nodos_iniciales_barra = [largo_inicial_barras, alpha, 0]
+    nodos_iniciales_barra = [largo_inicial_barras, alpha, alto_barras/2]
     x, y, z = coordenadas_cartesianas(nodos_iniciales_barra[0], nodos_iniciales_barra[1], nodos_iniciales_barra[2])
     x_1, y_1 = calcular_nuevo_punto_transversal(nodos_iniciales_barra[1], nodos_iniciales_barra[0], ancho_barras)
     x_2, y_2 = calcular_nuevo_punto_transversal(nodos_iniciales_barra[1], nodos_iniciales_barra[0], -ancho_barras)
@@ -141,11 +141,12 @@ def nodos_base_barras(nodos_iniciales_barra, nodos_barra, alpha):
 
     for i in range(len(nodos_barra[-1])):
         j = (i + 1) % len(nodos_barra[-1])
-        generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j])
+        #Las conexiones entre 3 nodos van a ser M
+        generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'M')
 
     #Ahora conecto con los apoyos
     if len(nodos_barra) > 1:
-        conectar_capas(nodos_barra[-2], nodos_barra[-1])
+        conectar_capas(nodos_barra[-2], nodos_barra[-1], 'L', 'S')
 
 def visualizar_panel(nodos_paneles, plotter, color='green'):
     for nodos_conectados in nodos_paneles:
@@ -183,7 +184,7 @@ def visualizar_caja_satelite(caras_caja, barras, conexiones_paneles):
 
     # Dibujar las barras que conectan los nodos
     for barra in barras:
-        _, nodo_i, nodo_j = barra  # Ignorar el número de barra, solo usar nodo_i y nodo_j
+        _, nodo_i, nodo_j, __ = barra  # Ignorar el número de barra, solo usar nodo_i y nodo_j
         nodo_inicio, nodo_fin = nodo_i - 1, nodo_j - 1  # Restar 1 para índices de numpy
         coord_inicio = nodes[nodo_inicio]
         coord_fin = nodes[nodo_fin]
@@ -194,19 +195,45 @@ def visualizar_caja_satelite(caras_caja, barras, conexiones_paneles):
     plotter.show_axes()
     plotter.show()
 
-def conectar_capas (nodos_capa_1, nodos_capa_2):
+def conectar_capas (nodos_capa_1, nodos_capa_2, Tamaño_Longitudinal, Tamaño_diagonal):
     global barra_actual, A_Small, gamma_fibra_carbono
     #Hago la conexión entre las capas
     for i in range(len(nodos_capa_1)):
         j = (i + 1) % len(nodos_capa_1)
-        ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[i], A_Small, 1, '-rho', gamma_fibra_carbono)
-        barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[i]])
+        if Tamaño_Longitudinal == 'S':
+            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[i], A_Small, 1, '-rho', gamma_fibra_carbono)
+            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[i], 'S'])
+        elif Tamaño_Longitudinal == 'M':
+            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[i], A_Medium, 1, '-rho', gamma_fibra_carbono)
+            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[i], 'M'])
+        elif Tamaño_Longitudinal == 'L':
+            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[i], A_Large, 1, '-rho', gamma_fibra_carbono)
+            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[i], 'L'])
         barra_actual += 1
 
     #Agrego la conexion diagonal
     for i in range(len(nodos_capa_1)):
-        ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[(i+1)%len(nodos_capa_2)], A_Small, 1, '-rho', gamma_fibra_carbono)
-        barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[(i+1)%len(nodos_capa_2)]])
+        if Tamaño_diagonal == 'S':
+            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[(i+1)%len(nodos_capa_2)], A_Small, 1, '-rho', gamma_fibra_carbono)
+            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[(i+1)%len(nodos_capa_2)], 'S'])
+        elif Tamaño_diagonal == 'M':
+            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[(i+1)%len(nodos_capa_2)], A_Medium, 1, '-rho', gamma_fibra_carbono)
+            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[(i+1)%len(nodos_capa_2)], 'M'])
+        elif Tamaño_diagonal == 'L':
+            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[(i+1)%len(nodos_capa_2)], A_Large, 1, '-rho', gamma_fibra_carbono)
+            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[(i+1)%len(nodos_capa_2)], 'L'])
+        barra_actual += 1
+    #Agrego la conexion diagonal en el otro sentido
+    for i in range(len(nodos_capa_1)):
+        if Tamaño_diagonal == 'S':
+            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[(i-1)%len(nodos_capa_2)], A_Small, 1, '-rho', gamma_fibra_carbono)
+            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[(i-1)%len(nodos_capa_2)], 'S'])
+        elif Tamaño_diagonal == 'M':
+            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[(i-1)%len(nodos_capa_2)], A_Medium, 1, '-rho', gamma_fibra_carbono)
+            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[(i-1)%len(nodos_capa_2)], 'M'])
+        elif Tamaño_diagonal == 'L':
+            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[(i-1)%len(nodos_capa_2)], A_Large, 1, '-rho', gamma_fibra_carbono)
+            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[(i-1)%len(nodos_capa_2)], 'L'])
         barra_actual += 1
 
 
@@ -222,7 +249,7 @@ def acumular_masa_barras_en_nodos():
     # Obtener la lista de todos los nodos en el modelo
     todos_los_nodos = set()
     for element in barras:
-        element_id, nodo_i, nodo_j = element
+        _, nodo_i, nodo_j, Seccion = element
         todos_los_nodos.add(nodo_i)
         todos_los_nodos.add(nodo_j)
 
@@ -231,13 +258,19 @@ def acumular_masa_barras_en_nodos():
         masa_nodo = 0
         # Buscar elementos conectados al nodo actual
         for element in barras:
-            element_id, nodo_i, nodo_j = element
+            element_id, nodo_i, nodo_j, Seccion = element
             if nodo == nodo_i or nodo == nodo_j:
                 # Calcular la masa de la barra
                 coord_i = np.array(ops.nodeCoord(nodo_i))
                 coord_j = np.array(ops.nodeCoord(nodo_j))
                 longitud = np.linalg.norm(coord_j - coord_i)
-                masa_barra = longitud * A_Small * gamma_fibra_carbono
+                if Seccion == 'S':
+                    masa_barra = longitud * A_Small * gamma_fibra_carbono
+                elif Seccion == 'M':
+                    masa_barra = longitud * A_Medium * gamma_fibra_carbono
+                elif Seccion == 'L':
+                    masa_barra = longitud * A_Large * gamma_fibra_carbono
+                
                 # Agregar la mitad de la masa de la barra al nodo
                 masa_nodo += masa_barra / 2
         # Almacenar la masa acumulada en el nodo
@@ -296,24 +329,24 @@ def alargar_barras (alpha, nodos_barra):
         x_1, y_1 = calcular_nuevo_punto_transversal(nodos_nuevos[1], nodos_nuevos[0], ancho_barras)
         x_2, y_2 = calcular_nuevo_punto_transversal(nodos_nuevos[1], nodos_nuevos[0], -ancho_barras)
         nodo_actual += 1
-        ops.node(nodo_actual, x, y, z)
+        ops.node(nodo_actual, x, y, z+alto_barras/2)
         nodo_actual += 1
-        ops.node(nodo_actual, x_1, y_1, z - alto_barras)
+        ops.node(nodo_actual, x_1, y_1, z - alto_barras/2)
         nodo_actual += 1
-        ops.node(nodo_actual, x_2, y_2, z - alto_barras)
+        ops.node(nodo_actual, x_2, y_2, z - alto_barras/2)
 
         nodos_barra.append([nodo_actual - 2, nodo_actual - 1, nodo_actual])
 
         for i in range(len(nodos_barra[-1])):
             j = (i + 1) % len(nodos_barra[-1])
-            generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j])
+            generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'M')
 
-        conectar_capas(nodos_barra[-2], nodos_barra[-1])
+        conectar_capas(nodos_barra[-2], nodos_barra[-1], 'L', 'S')
 
 def nodos_paneles(nodos_barra_A, nodos_barra_B):
     for i in range(len(nodos_barra_A)-2):
         j = i + 1
-        conexiones_paneles.append([nodos_barra_A[j][0], nodos_barra_B[j][0], nodos_barra_B[j+1][0], nodos_barra_A[j+1][0]])
+        conexiones_paneles.append([nodos_barra_A[j][1], nodos_barra_B[j][2], nodos_barra_B[j+1][2], nodos_barra_A[j+1][1]])
 
 def main():
     global gamma_fibra_carbono, E_fibra_carbono, A_Rope, A_Small, A_Medium, A_Large
@@ -473,7 +506,7 @@ def main():
 
    
 
-    def generar_torre(nodos_torre, up):
+    def generar_torre(nodos_torre, up, Tamaño):
         global nodo_actual, barra_actual, A_Small, gamma_fibra_carbono, altura_torre, espaciado_torre
 
 
@@ -503,24 +536,42 @@ def main():
 
             for b in range(len(nodos_torre[-1])):
                 j = (b + 1) % len(nodos_torre[-1])
-                generar_elemento_axial(nodos_torre[-1][b], nodos_torre[-1][j])
+                generar_elemento_axial(nodos_torre[-1][b], nodos_torre[-1][j], 'M')
 
             #Ahora conecto las capas
-            conectar_capas(nodos_torre[-2], nodos_torre[-1])
+            conectar_capas(nodos_torre[-2], nodos_torre[-1], 'L', 'S')
 
         #Ahora agrego las conexiones x en las capas
         for i in range(len(nodos_torre)):
             if i != 0:
-                ops.element('Truss', barra_actual, nodos_torre[i][0], nodos_torre[i][2], A_Small, 1, '-rho', gamma_fibra_carbono)
-                barras.append([barra_actual, nodos_torre[i][0], nodos_torre[i][2]])
-                barra_actual += 1
-                ops.element('Truss', barra_actual, nodos_torre[i][1], nodos_torre[i][3], A_Small, 1, '-rho', gamma_fibra_carbono)
-                barras.append([barra_actual, nodos_torre[i][1], nodos_torre[i][3]])
-                barra_actual += 1
+                if Tamaño == 'S':
+                    ops.element('Truss', barra_actual, nodos_torre[i][0], nodos_torre[i][0], A_Small, 1, '-rho', gamma_fibra_carbono)
+                    barras.append([barra_actual, nodos_torre[i][0], nodos_torre[i][0], 'S'])
+                    barra_actual += 1
+                    ops.element('Truss', barra_actual, nodos_torre[i][1], nodos_torre[i][1], A_Small, 1, '-rho', gamma_fibra_carbono)
+                    barras.append([barra_actual, nodos_torre[i][1], nodos_torre[i][1], 'S'])
+                    barra_actual += 1
+                
+                elif Tamaño == 'M':
+                    ops.element('Truss', barra_actual, nodos_torre[i][0], nodos_torre[i][0], A_Medium, 1, '-rho', gamma_fibra_carbono)
+                    barras.append([barra_actual, nodos_torre[i][0], nodos_torre[i][0], 'M'])
+                    barra_actual += 1
+                    ops.element('Truss', barra_actual, nodos_torre[i][1], nodos_torre[i][1], A_Medium, 1, '-rho', gamma_fibra_carbono)
+                    barras.append([barra_actual, nodos_torre[i][1], nodos_torre[i][1], 'M'])
+                    barra_actual += 1
+
+                elif Tamaño == 'L':
+                    ops.element('Truss', barra_actual, nodos_torre[i][0], nodos_torre[i][0], A_Large, 1, '-rho', gamma_fibra_carbono)
+                    barras.append([barra_actual, nodos_torre[i][0], nodos_torre[i][0], 'L'])
+                    barra_actual += 1
+                    ops.element('Truss', barra_actual, nodos_torre[i][1], nodos_torre[i][1], A_Large, 1, '-rho', gamma_fibra_carbono)
+                    barras.append([barra_actual, nodos_torre[i][1], nodos_torre[i][1], 'L'])
+                    barra_actual += 1
+          
 
         return nodos_torre
         
-    nodos_torre_1 = generar_torre(nodos_torre_1, True)
+    nodos_torre_1 = generar_torre(nodos_torre_1, True, 'L')
     #nodos_torre_2 = generar_torre(nodos_torre_2, False)
 
 
@@ -530,7 +581,7 @@ def main():
 
     
     
-    def conectar_mitades_torre_con_barras(torre, barras_grupo, gamma_fibra_carbono):
+    def conectar_mitades_torre_con_barras(torre, barras_grupo, gamma_fibra_carbono, Tamaño):
 
         global barra_actual, barras, A_Rope
 
@@ -544,14 +595,24 @@ def main():
         for esquina, barra_set in enumerate(barras_grupo):
             print(mitad_barra)
             for barra in barra_set:
+
+                if Tamaño == 'S':
+                    A_Rope = A_Small
+                
+                elif Tamaño == 'M':
+                    A_Rope = A_Medium
+                
+                elif Tamaño == 'L':
+                    A_Rope = A_Large
+
                 # Conectar nodo de mitad de la barra con el nodo de mitad de la torre
                 ops.element('Truss', barra_actual, barra[mitad_barra][0], torre[mitad_torre][esquina], A_Rope, 1, '-rho', gamma_fibra_carbono)
-                barras.append([barra_actual, barra[mitad_barra][0], torre[mitad_torre][esquina]])
+                barras.append([barra_actual, barra[mitad_barra][0], torre[mitad_torre][esquina], Tamaño])
                 barra_actual += 1
 
                 # Conectar nodo final de la barra con el nodo final de la torre
                 ops.element('Truss', barra_actual, barra[-1][0], torre[-1][esquina], A_Rope, 1, '-rho', gamma_fibra_carbono)
-                barras.append([barra_actual, barra[-1][0], torre[-1][esquina]])
+                barras.append([barra_actual, barra[-1][0], torre[-1][esquina], Tamaño])
                 barra_actual += 1
 
     # Ejemplo de uso:
@@ -561,7 +622,7 @@ def main():
     barras_grupo_4 = [nodos_barra_6, nodos_barra_7, nodos_barra_8]  # Barras para la cuarta esquina
 
     # Conectar cada esquina con sus barras correspondientes
-    #conectar_mitades_torre_con_barras(nodos_torre_1, [barras_grupo_1, barras_grupo_2, barras_grupo_3, barras_grupo_4], gamma_fibra_carbono)
+    conectar_mitades_torre_con_barras(nodos_torre_1, [barras_grupo_1, barras_grupo_2, barras_grupo_3, barras_grupo_4], gamma_fibra_carbono, 'L')
     #conectar_mitades_torre_con_barras(nodos_torre_2, [barras_grupo_1, barras_grupo_2, barras_grupo_3, barras_grupo_4], A_Small, gamma_fibra_carbono)
 
 
@@ -613,20 +674,20 @@ def main():
             #Conecto el nodo inicio con los primeros nodos
             if i == 1:
                 for a in range(len(nodos_barra_nueva[-1])):
-                    generar_elemento_axial(nodo_inicial, nodos_barra_nueva[-1][a])
+                    generar_elemento_axial(nodo_inicial, nodos_barra_nueva[-1][a], 'M')
 
             for a in range(len(nodos_barra_nueva[-1])):
      
                 j = (a + 1) % len(nodos_barra_nueva[-1])
-                generar_elemento_axial(nodos_barra_nueva[-1][a], nodos_barra_nueva[-1][j])
+                generar_elemento_axial(nodos_barra_nueva[-1][a], nodos_barra_nueva[-1][j], 'M')
 
             if len(nodos_barra_nueva) > 1:
                
-                conectar_capas(nodos_barra_nueva[-1], nodos_barra_nueva[-2])
+                conectar_capas(nodos_barra_nueva[-1], nodos_barra_nueva[-2], 'M', 'S')
 
         # Conectar el último nodo intermedio con el nodo final
         for a in range(len(nodos_barra_nueva[-1])):
-            generar_elemento_axial(nodos_barra_nueva[-1][a], nodo_final)
+            generar_elemento_axial(nodos_barra_nueva[-1][a], nodo_final, 'M')
 
             
 
