@@ -468,7 +468,7 @@ def main():
 
 
     #--------------------------------------------
-    #Genero la torre 
+    #Genero la torre
     #--------------------------------------------
 
     nodos_base_torre_1 = np.array([
