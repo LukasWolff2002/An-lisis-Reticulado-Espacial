@@ -8,7 +8,7 @@ limite2= 36 #Que tan ancha es la estructura
 gamma_fibra_carbono = 1.91 * 1000
 E_fibra_carbono = 338e9
 gamma_panel = 1.1
-D1, D2 = 0.010, 0.006
+D1, D2 = 0.030, 0.005
 A =np.pi*(D1**2-D2**2)/4
 
 ops.wipe()  
@@ -41,13 +41,8 @@ def plot_paneles_solares(plotter, nodos_paneles_solares1, nodos_paneles_solares2
                 surface2.faces = [3, 0, 1, 2]  # Define la cara triangular
                 plotter.add_mesh(surface2, color="gold", show_edges=True, opacity=0.7)
     
-
-
-
-
 def masa_nodos(nodos_totales, members, gamma_fibra_carbono):
     masas_nodos = np.zeros(len(nodos_totales))  # Inicializamos una lista con ceros para almacenar la masa de cada nodo
-    A = np.pi * (D1**2 - D2**2) / 4  # Área de la sección transversal (asegúrate de que esté definida en tu contexto)
     masa_estructura = 0  # Inicializamos la masa total de la estructura
     for member in members:
         nodo_i, nodo_j = member  # Extraer los nodos de cada miembro
@@ -63,8 +58,6 @@ def masa_nodos(nodos_totales, members, gamma_fibra_carbono):
 
     print("Masa total de la estructura:", masa_estructura)
     return masas_nodos, masa_estructura
-
-
 
 def calcular_masa_panel(paneles, nodos_totales):
     densidad_panel = 1.1  # Densidad del panel (kg/m^2)
@@ -99,9 +92,6 @@ def calcular_masa_panel(paneles, nodos_totales):
     
 
     return masas_nodos, masa_total
-
-
-
 
 def area_paneles_solares(nodos_paneles_solares1, nodos_paneles_solares2):
     paneles=[]
@@ -169,9 +159,9 @@ apoyos_der = np.array([
 ])
 
 # Inicializar los nodos y miembros
-nodos_totales = np.vstack((nodos_caja, apoyos_der))
+nodos_totales = apoyos_der
 
-members = np.array([[9, 10], [10, 11], [11, 9]])
+members = np.array([[0, 1]])
 
 # Definición de la función trusselator
 def trusselatorder(limite1, limite2, nodos_totales, members, nodos_paneles_solares):
@@ -186,7 +176,15 @@ def trusselatorder(limite1, limite2, nodos_totales, members, nodos_paneles_solar
             [-L1, L2, L0 + i * paso],
             [0, -L2, L0 + i * paso] #añado el último
         ]
-        mbr = np.array([
+        if i==1:
+            mbr = np.array([
+                [m, m + 1], [m + 1, m + 2], [m + 2, m],  # Cierra el triángulo
+                [m, m - 3], [m + 1, m - 2], [m + 2, m - 1],  # Conecta con el triángulo anterior
+                [m, m - 1], [m , m - 2], [m + 1, m - 1], [m+1,m-3], [m+2, m-3],[m+2,m-2]  # Conecta en diagonal
+                 
+            ])
+        else:
+            mbr = np.array([
             [m, m + 1], [m + 1, m + 2], [m + 2, m],  # Cierra el triángulo
             [m, m - 3], [m + 1, m - 2], [m + 2, m - 1],  # Conecta con el triángulo anterior
             [m, m - 1], [m + 1, m - 3], [m + 2, m - 2]  # Conecta en diagonal
@@ -259,7 +257,15 @@ def trusselatorizq(limite1, limite2, nodos_totales, members, nodos_paneles_solar
             [-L1, L2, L0 - i * paso],
             [0, -L2, L0 - i * paso]
         ]
-        mbr = np.array([
+        if i==1:
+            mbr = np.array([
+                [m, m + 1], [m + 1, m + 2], [m + 2, m],  # Cierra el triángulo
+                [m, m - 3], [m + 1, m - 2], [m + 2, m - 1],  # Conecta con el triángulo anterior
+                [m, m - 1], [m , m - 2], [m + 1, m - 1], [m+1,m-3], [m+2, m-3],[m+2,m-2]  # Conecta en diagonal
+                 
+            ])
+        else:
+            mbr = np.array([
             [m, m + 1], [m + 1, m + 2], [m + 2, m],  # Cierra el triángulo
             [m, m - 3], [m + 1, m - 2], [m + 2, m - 1],  # Conecta con el triángulo anterior
             [m, m - 1], [m + 1, m - 3], [m + 2, m - 2]  # Conecta en diagonal
@@ -326,15 +332,15 @@ nodos_totales, members, nodos_paneles_solares1 = trusselatorder(limite1, limite2
 
 m= len(nodos_totales)+1
 
-apoyos_der = np.array([
+apoyos_izq = np.array([
     [3.2, 3.8, -1.3],
     [-3.2, 3.8, -1.3],
     [0, -3.8, -1.3]
 ])
 
-mbr= [[m, m+1], [m+1, m+2], [m+2, m]] 
+mbr= [[m, m+1]] 
 
-nodos_totales=np.vstack((nodos_totales, apoyos_der))
+nodos_totales=np.vstack((nodos_totales, apoyos_izq))
 members=np.vstack((members, mbr))
 nodos_paneles_solares=[[],[]]
 nodos_totales, members, nodos_paneles_solares2 = trusselatorizq(limite1, limite2, nodos_totales, members, nodos_paneles_solares)
@@ -349,22 +355,43 @@ for i, member in enumerate(members):
     nodo_j = int(member[1] + 1)
     ops.element('Truss', i + 1, nodo_i, nodo_j, A, 1, '-rho', gamma_fibra_carbono)
 
+indices_apoyos_der = [0,1,2]
+
+# Índices de los nodos de apoyo izquierdo
+indices_apoyos_izq = [73,74,75]
+
+# Fijar los nodos de los apoyos en todos los grados de libertad (x, y, z)
+for idx in indices_apoyos_der:
+    ops.fix(idx + 1, 1, 1, 1)  # Fijar todos los grados de libertad en el apoyo derecho
+
+for idx in indices_apoyos_izq:
+    ops.fix(idx + 1, 1, 1, 1)
+
 #---------------------------------------------------------------------------------------------------------Masa de los nodos
+# Calcular la masa de los nodos de la estructura
 masas_nodos, masa_estructura = masa_nodos(nodos_totales, members, gamma_fibra_carbono)
-for i, masa in enumerate(masas_nodos, start=1):  # Enumeración comienza en 1 porque los nodos en OpenSees también lo hacen
-    ops.mass(i, masa, masa, masa)
 
-paneles= area_paneles_solares(nodos_paneles_solares1, nodos_paneles_solares2)
+# Calcular la masa de los paneles solares
+paneles = area_paneles_solares(nodos_paneles_solares1, nodos_paneles_solares2)
+masas_nodo_panel, masa_total_paneles = calcular_masa_panel(paneles, nodos_totales)
 
-masas_nodos, masa_total = calcular_masa_panel(paneles, nodos_totales)
+# Sumar la masa de los paneles a la masa estructural de cada nodo
 
-# Asignar las masas adicionales en OpenSees
+# Asignar las masas combinadas en OpenSees
 for i, masa in enumerate(masas_nodos, start=1):
     ops.mass(i, masa, masa, masa)
 
-RME= masa_estructura/masa_total
+
+RME= masa_estructura/masa_total_paneles
 
 print("RME de la estructura:", RME)
+
+num_modos = 3  # Número de modos a calcular
+eigenvalues = ops.eigen(num_modos)  # Realiza el análisis modal
+frecuencias = [np.sqrt(eigenval) / (2 * np.pi) for eigenval in eigenvalues]
+for i, freq in enumerate(frecuencias, start=1):
+    print(f"Frecuencia del modo {i}: {freq:.8f} Hz")
+
 
 #---------------------------------------------------------------------------------------------------------EJECUCIÓN DEL MODELO
 plotter = pv.Plotter()
@@ -388,7 +415,14 @@ for member in members:
 
 plot_paneles_solares(plotter, nodos_paneles_solares1, nodos_paneles_solares2)
 
+# Agregar etiquetas en los nodos de los apoyos
+for idx in indices_apoyos_der:
+    plotter.add_point_labels([nodos_totales[idx]], [f"Apoyo Der {idx+1}"], font_size=15, text_color="green")
+
+
+
+
 # Visualización final
 plotter.add_axes()
-# plotter.show()
+plotter.show()
 
