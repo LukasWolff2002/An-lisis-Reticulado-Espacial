@@ -50,6 +50,8 @@ def angulos_barras():
     alpha_6 = 2 * alpha_2 + alpha_4
     alpha_7 = 270
     alpha_8 = alpha_6 + np.degrees(2 * atan(1.65 / 1.95))
+
+    alpha_1 += 20
     return [alpha_1, alpha_2, alpha_3, alpha_4, alpha_5, alpha_6, alpha_7, alpha_8]
 
 def generar_elemento_axial(nodo_1, nodo_2, Tamaño):
