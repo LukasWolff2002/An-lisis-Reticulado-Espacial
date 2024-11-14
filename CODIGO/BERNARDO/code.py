@@ -8,7 +8,7 @@ limite2= 36 #Que tan ancha es la estructura
 gamma_fibra_carbono = 1.91 * 1000
 E_fibra_carbono = 338e9
 gamma_panel = 1.1
-D1, D2 = 0.030, 0.005
+D1, D2 = 0.013, 0.0001
 A =np.pi*(D1**2-D2**2)/4
 
 ops.wipe()  
