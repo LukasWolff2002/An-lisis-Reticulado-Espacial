@@ -8,13 +8,18 @@ nodo_actual, barra_actual = 0, 0
 gamma_fibra_carbono = 1.91 * 1000     # Densidad de la fibra de carbono (kg/m³)
 E_fibra_carbono = 338e9               # Módulo de Young de la fibra de carbono (Pa)
 gamma_panel = 1.1                     # Densidad del panel (kg/m²)
+fluencia_fibra_carbono = 2.02e9       # Límite de fluencia de la fibra de carbono (Pa)
+FS = 2                                # Factor de seguridad
 
 # Dimensiones de las secciones de las barras
 D1_Rope, D2_Rope = 0.004, 0.000
-D1_Small, D2_Small = 0.02, 0.0175
-D1_Medium, D2_Medium = 0.04, 0.0375
-D1_Large, D2_Large = 0.06, 0.05
-A_Rope, A_Small, A_Medium, A_Large = None, None, None, None
+D1_ExtraS, D2_ExtraS = 0.022, 0.021   # Nueva sección ExtraS
+D1_Small, D2_Small = 0.03, 0.024
+D1_Medium, D2_Medium = 0.04, 0.0354
+D1_Large, D2_Large = 0.05, 0.045
+D1_ExtraL, D2_ExtraL = 0.06, 0.055    # Nueva sección ExtraL
+A_Rope, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL = None, None, None, None, None, None
+I_Rope, I_ExtraS, I_Small, I_Medium, I_Large, I_ExtraL = None, None, None, None, None, None
 
 # Parámetros geométricos
 ancho_barras = 2
@@ -22,6 +27,8 @@ alto_barras = 3.9
 largo_inicial_barras = 7
 largo_barras = 33.96
 espaciamiento = 5.66
+delta_alto = 0.3
+delta_ancho = 0.2
 
 # Listas y diccionarios globales
 conexiones_paneles = []
@@ -51,23 +58,6 @@ def definir_seccion_tubo(D1, D2):
     A = np.pi * (D1**2 - D2**2) / 4
     return A
 
-# Funciones de generación de nodos y elementos
-def definir_nodos_fijos(nodes):
-    """Define nodos fijos en el modelo."""
-    global nodo_actual
-    for n in nodes:
-        nodo_actual += 1
-        ops.node(nodo_actual, float(n[0]), float(n[1]), float(n[2]))
-        ops.fix(nodo_actual, 1, 1, 1)
-
-def generar_elemento_axial(nodo_1, nodo_2, Tamaño):
-    """Genera un elemento axial (barra) entre dos nodos."""
-    global barra_actual, A_Small, A_Medium, A_Large, gamma_fibra_carbono
-    area = {'S': A_Small, 'M': A_Medium, 'L': A_Large}[Tamaño]
-    ops.element('Truss', barra_actual, nodo_1, nodo_2, area, 1, '-rho', gamma_fibra_carbono)
-    barras.append([barra_actual, nodo_1, nodo_2, Tamaño])
-    barra_actual += 1
-
 # Funciones geométricas y de cálculo de coordenadas
 def coordenadas_cartesianas(largo, angulo_xy, altura_z):
     """Calcula las coordenadas cartesianas dado un largo, ángulo y altura."""
@@ -86,6 +76,32 @@ def calcular_nuevo_punto_transversal(angulo_xy, largo, distancia_transversal):
     x_nuevo = x_base + distancia_transversal * np.cos(angulo_perpendicular_rad)
     y_nuevo = y_base + distancia_transversal * np.sin(angulo_perpendicular_rad)
     return x_nuevo, y_nuevo
+
+# Funciones para definir nodos y elementos
+def definir_nodos_fijos(nodes):
+    """Define nodos fijos en el modelo."""
+    global nodo_actual
+    for n in nodes:
+        nodo_actual += 1
+        ops.node(nodo_actual, float(n[0]), float(n[1]), float(n[2]))
+        ops.fix(nodo_actual, 1, 1, 1)
+
+def generar_elemento_axial(nodo_1, nodo_2, Tamaño):
+    """Genera un elemento axial (barra) entre dos nodos."""
+    global barra_actual, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL, gamma_fibra_carbono
+    area_dict = {
+        'XS': A_ExtraS,
+        'S': A_Small,
+        'M': A_Medium,
+        'L': A_Large,
+        'XL': A_ExtraL
+    }
+    area = area_dict.get(Tamaño)
+    if area is None:
+        raise ValueError(f"Tamaño de sección desconocido: {Tamaño}")
+    ops.element('Truss', barra_actual, nodo_1, nodo_2, area, 1, '-rho', gamma_fibra_carbono)
+    barras.append([barra_actual, nodo_1, nodo_2, Tamaño])
+    barra_actual += 1
 
 # Funciones para definir apoyos y nodos base
 def nodos_apoyos(nodos_apoyo, nodos_barra):
@@ -112,55 +128,101 @@ def nodos_base_barras(nodos_iniciales_barra, nodos_barra, alpha):
     nodos_barra.append([nodo_actual - 2, nodo_actual - 1, nodo_actual])
     for i in range(len(nodos_barra[-1])):
         j = (i + 1) % len(nodos_barra[-1])
-        generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'S')
+        if i == 1:
+            generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'XS')
+        else:
+            generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'M')  # Usamos 'XS' para la base
+        
     if len(nodos_barra) > 1:
-        conectar_capas(nodos_barra[-2], nodos_barra[-1], 'L', 'L')
+        conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'M', 'L')
 
 # Funciones para conectar capas y alargar barras
-def conectar_capas(nodos_capa_1, nodos_capa_2, Tamaño_Longitudinal, Tamaño_diagonal):
+def conectar_capas(nodos_capa_1, nodos_capa_2, Tamaño_Longitudinal, Tamaño_diagonal, Tamaño_Longitudinal_Sup=None, Diagonal_especial_1=None, Diagonal_especial_2=None):
     """Conecta dos capas de nodos con elementos longitudinales y diagonales."""
-    global barra_actual, A_Small, A_Medium, A_Large, gamma_fibra_carbono
-    area_longitudinal = {'S': A_Small, 'M': A_Medium, 'L': A_Large}[Tamaño_Longitudinal]
-    area_diagonal = {'S': A_Small, 'M': A_Medium, 'L': A_Large}[Tamaño_diagonal]
+    global barra_actual, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL, gamma_fibra_carbono
+    area_dict = {
+        'XS': A_ExtraS,
+        'S': A_Small,
+        'M': A_Medium,
+        'L': A_Large,
+        'XL': A_ExtraL
+    }
+    area_longitudinal = area_dict.get(Tamaño_Longitudinal)
+    if Tamaño_Longitudinal_Sup is not None:
+        area_longitudinal_2 = area_dict.get(Tamaño_Longitudinal_Sup)
+    if Diagonal_especial_1 is not None:
+        area_diagonal_1 = area_dict.get(Diagonal_especial_1)
+    if Diagonal_especial_2 is not None:
+        area_diagonal_2 = area_dict.get(Diagonal_especial_2)
+    area_diagonal = area_dict.get(Tamaño_diagonal)
+    if area_longitudinal is None or area_diagonal is None:
+        raise ValueError(f"Tamaño de sección desconocido: {Tamaño_Longitudinal} o {Tamaño_diagonal}")
+
     for i in range(len(nodos_capa_1)):
         # Elementos longitudinales
-        ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[i], area_longitudinal, 1, '-rho', gamma_fibra_carbono)
-        barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[i], Tamaño_Longitudinal])
-        barra_actual += 1
+        if Tamaño_Longitudinal_Sup is not None and i == 0:
+            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[i], area_longitudinal_2, 1, '-rho', gamma_fibra_carbono)
+            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[i], Tamaño_Longitudinal_Sup])
+            barra_actual += 1
+        else:
+            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[i], area_longitudinal, 1, '-rho', gamma_fibra_carbono)
+            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[i], Tamaño_Longitudinal])
+            barra_actual += 1
         # Elementos diagonales
         indices = [((i + 1) % len(nodos_capa_2)), ((i - 1) % len(nodos_capa_2))]
         for idx in indices:
-            ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[idx], area_diagonal, 1, '-rho', gamma_fibra_carbono)
-            barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[idx], Tamaño_diagonal])
-            barra_actual += 1
+   
+            if Diagonal_especial_1 is not None and i == 0:
+                ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[idx], area_diagonal_1, 1, '-rho', gamma_fibra_carbono)
+                barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[idx], Diagonal_especial_1])
+                barra_actual += 1
+
+            if Diagonal_especial_2 is not None and idx == 0:
+                ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[idx], area_diagonal_2, 1, '-rho', gamma_fibra_carbono)
+                barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[idx], Diagonal_especial_2])
+                barra_actual += 1
+            else:
+                ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[idx], area_diagonal, 1, '-rho', gamma_fibra_carbono)
+                barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[idx], Tamaño_diagonal])
+                barra_actual += 1
 
 def alargar_barras(alpha, nodos_barra):
     """Extiende las barras a lo largo de su longitud y genera los elementos correspondientes."""
-    global nodo_actual
+    global nodo_actual, delta_ancho, delta_alto
     num_segmentos = int(largo_barras / espaciamiento)
     for a in range(num_segmentos):
         largo_adicional = (a + 1) * espaciamiento
+        delta_a = (a+1) * delta_alto
+        delta_h = (a+1) * delta_ancho
         x, y, z = coordenadas_cartesianas(largo_inicial_barras + largo_adicional, alpha, 0)
-        x_1, y_1 = calcular_nuevo_punto_transversal(alpha, largo_inicial_barras + largo_adicional, ancho_barras)
-        x_2, y_2 = calcular_nuevo_punto_transversal(alpha, largo_inicial_barras + largo_adicional, -ancho_barras)
+        x_1, y_1 = calcular_nuevo_punto_transversal(alpha, largo_inicial_barras + largo_adicional, ancho_barras-delta_h)
+        
+        x_2, y_2 = calcular_nuevo_punto_transversal(alpha, largo_inicial_barras + largo_adicional, -ancho_barras+delta_h)
         nodo_actual += 1
-        ops.node(nodo_actual, x, y, z + alto_barras / 2)
+        ops.node(nodo_actual, x, y, z + (alto_barras / 2) )
         nodo_actual += 1
-        ops.node(nodo_actual, x_1, y_1, z - alto_barras / 2)
+        ops.node(nodo_actual, x_1, y_1, z - (alto_barras / 2) + delta_a)
         nodo_actual += 1
-        ops.node(nodo_actual, x_2, y_2, z - alto_barras / 2)
+        ops.node(nodo_actual, x_2, y_2, z - (alto_barras / 2) + delta_a)
         nodos_barra.append([nodo_actual - 2, nodo_actual - 1, nodo_actual])
         # Generar elementos axiales
         for i in range(len(nodos_barra[-1])):
             j = (i + 1) % len(nodos_barra[-1])
-            generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'S')
+            if a < (num_segmentos / 2):
+
+                generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'S')
+            else:
+                generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'XS')
         # Conectar capas según la posición
-        if a < (num_segmentos / 2) - 1:
+        if a == 0:
             conectar_capas(nodos_barra[-2], nodos_barra[-1], 'L', 'M')
-        elif a < (3 * num_segmentos / 4) - 1:
-            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'M', 'M')
+        elif a < (num_segmentos / 2):
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'L', 'M', None, 'M')
+        elif a < (3 * num_segmentos / 4):
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'M', 'M', None, 'M', 'S')
+
         else:
-            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'S', 'S')
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'S', 'XS', 'M', 'S', 'M')
 
 # Funciones para definir paneles y calcular áreas
 def nodos_paneles(nodos_barra_A, nodos_barra_B):
@@ -183,7 +245,15 @@ def area_tres_nodos_por_numero(nodo1, nodo2, nodo3):
 # Funciones para acumulación de masas
 def acumular_masa_barras_en_nodos():
     """Acumula la masa de las barras en los nodos correspondientes."""
-    global barras, masa_acumulada_por_nodo, A_Rope, A_Large, A_Medium, A_Small, gamma_fibra_carbono
+    global barras, masa_acumulada_por_nodo, A_Rope, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL, gamma_fibra_carbono
+    area_dict = {
+        'Rope': A_Rope,
+        'XS': A_ExtraS,
+        'S': A_Small,
+        'M': A_Medium,
+        'L': A_Large,
+        'XL': A_ExtraL
+    }
     todos_los_nodos = set()
     for element in barras:
         _, nodo_i, nodo_j, _ = element
@@ -196,7 +266,9 @@ def acumular_masa_barras_en_nodos():
                 coord_i = np.array(ops.nodeCoord(nodo_i))
                 coord_j = np.array(ops.nodeCoord(nodo_j))
                 longitud = np.linalg.norm(coord_j - coord_i)
-                area = {'S': A_Small, 'M': A_Medium, 'L': A_Large, 'Rope': A_Rope}[Seccion]
+                area = area_dict.get(Seccion)
+                if area is None:
+                    raise ValueError(f"Sección desconocida: {Seccion}")
                 masa_barra = longitud * area * gamma_fibra_carbono
                 masa_nodo += masa_barra / 2
         masa_acumulada_por_nodo[nodo] = masa_nodo
@@ -309,14 +381,17 @@ def realizar_analisis_termico():
     # Aplicar la carga térmica a las barras filtradas
     for barra in barras_paneles:
         # Reemplazar el elemento con uno que tenga el material con deformación térmica
-        if barra[-1] == 'Rope':
-            area = A_Rope
-        elif barra[-1] == 'S':
-            area = A_Small
-        elif barra[-1] == 'M':
-            area = A_Medium
-        elif barra[-1] == 'L':
-            area = A_Large
+        area_dict = {
+            'Rope': A_Rope,
+            'XS': A_ExtraS,
+            'S': A_Small,
+            'M': A_Medium,
+            'L': A_Large,
+            'XL': A_ExtraL
+        }
+        area = area_dict.get(barra[3])
+        if area is None:
+            raise ValueError(f"Sección desconocida: {barra[3]}")
 
         # Reemplazar el elemento con el nuevo material
         ops.element('Truss', barra_actual, barra[1], barra[2], area, matTag_with_thermal, '-rho', gamma_fibra_carbono)
@@ -424,9 +499,11 @@ def visualizar_caja_satelite(caras_caja, barras, conexiones_paneles):
     visualizar_panel_4_puntos(caras_caja, plotter, color='blue')
     visualizar_panel_3_puntos(conexiones_paneles, plotter, color='gold')
     color_mapping = {
+        'XS': 'cyan',    # Barras Extra Small
         'S': 'green',    # Barras pequeñas
         'M': 'orange',   # Barras medianas
         'L': 'red',      # Barras grandes
+        'XL': 'black',   # Barras extra grandes
         'Rope': 'purple' # Otros tipos de barras
     }
     sizes_plotted = set()
@@ -446,6 +523,7 @@ def visualizar_caja_satelite(caras_caja, barras, conexiones_paneles):
     plotter.show_axes()
     plotter.show()
 
+#Otras funciones de graficos
 def visualizar_desplazamiento_termico(barras, conexiones_paneles, escala):
     """Visualiza la estructura original y deformada térmicamente."""
     plotter = pv.Plotter()
@@ -535,23 +613,142 @@ def graficar_mapa_calor_inercia (barras, fuerzas_maximas):
     plotter.show_axes()
     plotter.show()
 
+def inercia (D1, D2):
+    return np.pi * (D1 ** 4 - D2 ** 4) / 64
 
+def revisar_falla_barras (barras, fuerzas_maximas):
+    global fluencia_fibra_carbono, FS, E_fibra_carbono
+    global A_Rope, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL
+    global I_Rope, I_ExtraS, I_Small, I_Medium, I_Large, I_ExtraL
+    factor_utilizacion = {}
+    for i, barra in enumerate(barras):
+
+        if barra[3] == 'Rope':      
+            area = A_Rope
+            inercia = I_Rope
+        elif barra[3] == 'XS':
+            area = A_ExtraS
+            inercia = I_ExtraS
+        elif barra[3] == 'S':
+            area = A_Small
+            inercia = I_Small
+        elif barra[3] == 'M':
+            area = A_Medium
+            inercia = I_Medium
+        elif barra[3] == 'L':
+            area = A_Large
+            inercia = I_Large
+        elif barra[3] == 'XL':
+            area = A_ExtraL
+            inercia = I_ExtraL
+
+        tension = (fuerzas_maximas[i]*FS)/area
+        
+        if tension > fluencia_fibra_carbono:
+            raise ValueError(f"La barra {i}, que conecta los nodos {barras[i][1],barras[i][2]} ha fallado por tensión")
+    
+        largo_barra = np.linalg.norm(np.array(ops.nodeCoord(barras[i][1])) - np.array(ops.nodeCoord(barras[i][2])))
+        pandeo = (fuerzas_maximas[i]*FS*(largo_barra**2))/((np.pi**2)*inercia)
+
+        
+        if pandeo > E_fibra_carbono:
+            raise ValueError(f"La barra {i}, que conecta los nodos {barras[i][1],barras[i][2]} ha fallado por pandeo, con un valor de {pandeo/10e8} GPa")
+
+        FU = pandeo/E_fibra_carbono
+        
+        factor_utilizacion[i] = FU
+
+    return factor_utilizacion
+
+def visualizar_factor_utilizacion(barras, facotres_utilizacion):
+    plotter = pv.Plotter()
+    nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
+
+    lines = []
+    colors = []
+
+    factor_maximo = 1
+
+    # Crear lista de líneas y colores
+    lines = []
+    colors = []
+    for element in barras:
+        element_id, nodo_i, nodo_j, _ = element
+        lines.append([2, nodo_i - 1, nodo_j - 1])
+        
+        fuerza_normalizada = facotres_utilizacion.get(element_id, 0)/factor_maximo
+        colors.append(255*fuerza_normalizada)
+
+    truss = pv.PolyData(nodes)
+    truss.lines = np.hstack(lines)
+
+    for i, line in enumerate(truss.lines.reshape(-1, 3)):
+        start_idx = line[1]
+        end_idx = line[2]
+        points = nodes[[start_idx, end_idx]]
+        segment = pv.Line(points[0], points[1])
+        
+        # Determinar el color en la escala azul-verde-rojo
+        color_value = colors[i]
+        if color_value > 128:  # De verde a azul
+            green_component = int(255 - 2 * (color_value - 128))  # Decrece de 255 a 0
+            blue_component = int(2 * (color_value - 128))         # Aumenta de 0 a 255
+            color_rgb = [0, green_component, blue_component]
+        else:  # De rojo a verde
+            red_component = int(255 - 2 * color_value)            # Decrece de 255 a 0
+            green_component = int(2 * color_value)                # Aumenta de 0 a 255
+            color_rgb = [red_component, green_component, 0]
+
+        plotter.add_mesh(segment, color=color_rgb, line_width=2)
+
+    # Agregar etiquetas de números de nodos (opcional)
+    node_tags = ops.getNodeTags()
+    labels = [str(tag) for tag in node_tags]
+    plotter.add_point_labels(nodes, labels, point_size=5, font_size=12, text_color='black', name='labels')
+    #visualizar_estructura_rigida(nodos_paneles, plotter, color='gold')
+    #plotter.add_text(titulo, position='upper_left', font_size=10)
+    plotter.add_legend([("Alto Uso", "blue"), ("Media Uso", "green"),("TMinimo Uso", "red")])
+    
+    # Agregar la leyenda de la escala de colores en la parte inferior
+    # Agregar la barra de colores con el rango de valores de 0 a f_max
+    plotter.add_scalar_bar(title="Esfuerzo Interno Normalizado", 
+                        position_x=0.3, position_y=0.05, 
+                        width=0.4, height=0.05, 
+                        label_font_size=10, title_font_size=12, 
+                        n_labels=5)
+
+    # Ajustar el rango de valores de la barra de colores
+    plotter.update_scalar_bar_range([0, 1])
+
+    plotter.show_axes()
+    plotter.show()
 
 # Función principal
 def main():
     global gamma_fibra_carbono, E_fibra_carbono
-    global A_Rope, A_Small, A_Medium, A_Large
+    global A_Rope, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL
+    global I_Rope, I_ExtraS, I_Small, I_Medium, I_Large, I_ExtraL
     global barras, conexiones_paneles, nodo_actual, barra_actual
-    global alpha_T, deltaT
+    global alpha_T, deltaT, FS, fluencia_fibra_carbono
+    global delta_alto, delta_ancho
 
     # Inicialización y definición de materiales
     inicializar_modelo()
     definir_material(material_id=1, E=E_fibra_carbono)
     # Definir secciones
     A_Rope = definir_seccion_tubo(D1=D1_Rope, D2=D2_Rope)
+    A_ExtraS = definir_seccion_tubo(D1=D1_ExtraS, D2=D2_ExtraS)
     A_Small = definir_seccion_tubo(D1=D1_Small, D2=D2_Small)
     A_Medium = definir_seccion_tubo(D1=D1_Medium, D2=D2_Medium)
     A_Large = definir_seccion_tubo(D1=D1_Large, D2=D2_Large)
+    A_ExtraL = definir_seccion_tubo(D1=D1_ExtraL, D2=D2_ExtraL)
+
+    I_Rope = inercia(D1_Rope, D2_Rope)
+    I_ExtraS = inercia(D1_ExtraS, D2_ExtraS)
+    I_Small = inercia(D1_Small, D2_Small)
+    I_Medium = inercia(D1_Medium, D2_Medium)
+    I_Large = inercia(D1_Large, D2_Large)
+    I_ExtraL = inercia(D1_ExtraL, D2_ExtraL)
 
     # Definir nodos fijos
     nodes = np.array([
@@ -600,6 +797,7 @@ def main():
     conexiones_paneles.append([nodos_barras[0][1][0], nodos_barras[1][1][0], nodos_barras[2][1][0]])
     conexiones_paneles.append([nodos_barras[2][1][0], nodos_barras[3][1][0], nodos_barras[0][1][0]])
 
+    # Visualizar la estructura
     visualizar_caja_satelite(caras_caja, barras, conexiones_paneles)
 
     # Acumular masas y asignar masas a los nodos
@@ -625,8 +823,11 @@ def main():
         [0, 0, aceleracion_magnitud]
     ]
     fuerzas_maximas = realizar_analisis_inercial(aceleraciones)
-    graficar_mapa_calor_inercia(barras, fuerzas_maximas)
-    
+
+    #graficar_mapa_calor_inercia(barras, fuerzas_maximas)
+            
+    factores_utilizacion = revisar_falla_barras(barras, fuerzas_maximas)
+    visualizar_factor_utilizacion(barras, factores_utilizacion)
 
     # Análisis Térmico
     realizar_analisis_termico()
@@ -638,8 +839,7 @@ def main():
         if angulo > 2:
             raise ValueError(f"El ángulo entre los vectores normales del panel es mayor a 2 grados")
 
-    # Visualizar la estructura termica
-    visualizar_desplazamiento_termico(barras, conexiones_paneles, escala=1000)
+    #isualizar_desplazamiento_termico(barras, conexiones_paneles, escala=1000)
 
 if __name__ == "__main__":
     main()
