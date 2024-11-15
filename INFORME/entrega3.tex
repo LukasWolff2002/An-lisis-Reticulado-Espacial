@@ -83,6 +83,33 @@ En la figura \ref{fig:propuesta1_pandeo}, esto es un factor a tener en cuenta, y
 
 En la figura \ref{fig:propuesta1_termico} se puede apreciar el desplazamiento termico, donde se asumio que solamente las barras que estan junta al panel solar son las que se ven afectadas por el cambio de temperatura, esto ya que reciben el calor directamente.
 
+Finalmente, mediante un código llamado verificar\_diseño.py se obtuvieron los siguientes resultados:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|c|}
+    \hline
+    \textbf{Parámetro}              & \textbf{Valor}                     & \textbf{Cumple} \\ \hline
+    Masa total barras               & 1161.16 kg                         & -               \\ \hline
+    Área total de panel             & 3355.44 m²                         & -               \\ \hline
+    Área requerida                  & 3333.33 m²                         & -               \\ \hline
+    Suficiente área                 & -                                   & \textbf{True}   \\ \hline
+    Masa total panel                & 3690.99 kg                         & -               \\ \hline
+    RME                             & 31.46\%                            & -               \\ \hline
+    Cumple RME                      & -                                   & \textbf{False}  \\ \hline
+    Cumple resistencia              & 0.0 < FU < 0.0182033262645507      & \textbf{True}   \\ \hline
+    Cumple pandeo                   & -                                   & \textbf{True}   \\ \hline
+    Frecuencia fundamental          & 0.089 Hz                           & \textbf{False}  \\ \hline
+    $\theta_\text{all\_max}$        & 0.03208818380943898                & \textbf{True}   \\ \hline
+    Cumple $\theta_\text{max}$      & -                                   & \textbf{True}   \\ \hline
+    \end{tabular}
+    \caption{Resultados de la propuesta numero 1 para verificar si el diseño cumple.}
+    \label{tabla:modelo_h5_p1}
+\end{table}
+    
+Donde se puede apreciar que se cumplen casi todos los criterios, menos RME y la frecuencia fundamental.
+
+
 \newpage
 \section{Propuesta 2}
 
@@ -102,7 +129,7 @@ En este caso el diseño tine una forma de H, donde se decidio llevar a cabo este
 \newpage
 \section{Propuesta final}
 
-Luego de comparar amabas propuestas, se decidio que la propuesta 1 es la que cumple con todos los criterios de diseño y operación, por lo que se decidio que esta es la mejor propuesta para el diseño del datacenter orbital de 1MW. Además, esta propuesta es la que minimiza el peso total y el momento de inercia de todo el datacenter. Luego otro criterio utilizado para elegir este diseño es que al ser 4 brazos independientes unos de otros, al tener cualquier complicacion es mas facil de trabajar en el software de diseño de estructuras OpenSeesPy por lo que se seguira con este diseño para el resto del proyecto.
+Luego de comparar ambas propuestas, se decidio que la propuesta 1 es la que cumple con todos los criterios de diseño y operación, por lo que se decidio que esta es la mejor propuesta para el diseño del datacenter orbital de 1MW. Además, esta propuesta es la que minimiza el peso total y el momento de inercia de todo el datacenter. Luego otro criterio utilizado para elegir este diseño es que al ser 4 brazos independientes unos de otros, al tener cualquier complicacion es mas facil de trabajar en el software de diseño de estructuras OpenSeesPy por lo que se seguira con este diseño para el resto del proyecto.
 
 \begin{figure}[H]
     \centering
@@ -110,3 +137,5 @@ Luego de comparar amabas propuestas, se decidio que la propuesta 1 es la que cum
     \caption{Diseño final (Propuesta 1)}
     \label{fig:propuesta1}
 \end{figure}
+
+Aunque como se puede apreciar en la tabla \ref{tabla:modelo_h5_p1} no se cumplen todos los criterios, pero se decidio que ese proyecto es mas factible y se puede mejorar para que cumpla todos los requesitos de diseño y operación.
