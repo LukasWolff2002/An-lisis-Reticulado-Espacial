@@ -15,10 +15,10 @@ FS = 2                                # Factor de seguridad
 # Dimensiones de las secciones de las barras
 D1_Rope, D2_Rope = 0.004, 0.000
 D1_ExtraS, D2_ExtraS = 0.022, 0.021   # Nueva sección ExtraS
-D1_Small, D2_Small = 0.03, 0.024
-D1_Medium, D2_Medium = 0.036, 0.032
-D1_Large, D2_Large = 0.04, 0.037
-D1_ExtraL, D2_ExtraL = 0.041, 0.03   # Nueva sección ExtraL
+D1_Small, D2_Small = 0.033, 0.024
+D1_Medium, D2_Medium = 0.037, 0.032
+D1_Large, D2_Large = 0.041, 0.035
+D1_ExtraL, D2_ExtraL = 0.0425, 0.03   # Nueva sección ExtraL
 A_Rope, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL = None, None, None, None, None, None
 I_Rope, I_ExtraS, I_Small, I_Medium, I_Large, I_ExtraL = None, None, None, None, None, None
 
@@ -498,7 +498,7 @@ def visualizar_caja_satelite(caras_caja, barras, conexiones_paneles):
     node_tags = ops.getNodeTags()
     node_coords = [ops.nodeCoord(tag) for tag in node_tags]
     nodes = np.array(node_coords)
-    plotter = pv.Plotter()
+    plotter = pv.Plotter(window_size=[1920, 1080])
     points = pv.PolyData(nodes)
     labels = {i + 1: str(tag) for i, tag in enumerate(node_tags)}
     plotter.add_point_labels(points, labels, font_size=10, text_color="red", always_visible=True)
@@ -528,11 +528,12 @@ def visualizar_caja_satelite(caras_caja, barras, conexiones_paneles):
     plotter.add_legend()
     plotter.show_axes()
     plotter.show()
+    plotter.screenshot(filename='INFORME/GRAFICOS_DISENO_LUKAS/diseño_satelite', transparent_background=False)
 
 #Otras funciones de graficos
 def visualizar_desplazamiento_termico(barras, conexiones_paneles, escala):
     """Visualiza la estructura original y deformada térmicamente."""
-    plotter = pv.Plotter()
+    plotter = pv.Plotter(window_size=[1920, 1080])
     nodes_tags = ops.getNodeTags()
     nodes_coords = np.array([ops.nodeCoord(tag) for tag in nodes_tags])
     deformaciones = [np.array([ops.nodeDisp(tag)[i] for tag in nodes_tags]) for i in range(3)]
@@ -549,9 +550,10 @@ def visualizar_desplazamiento_termico(barras, conexiones_paneles, escala):
 
     plotter.show_axes()
     plotter.show()
+    plotter.screenshot(filename='INFORME/GRAFICOS_DISENO_LUKAS/desplazamiento_termico', transparent_background=False)
 
 def graficar_mapa_calor_inercia (barras, fuerzas_maximas):
-    plotter = pv.Plotter()
+    plotter = pv.Plotter(window_size=[1920, 1080])
     nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
 
     f_max = max(fuerzas_maximas.values())
@@ -618,6 +620,7 @@ def graficar_mapa_calor_inercia (barras, fuerzas_maximas):
 
     plotter.show_axes()
     plotter.show()
+    plotter.screenshot(filename='INFORME/GRAFICOS_DISENO_LUKAS/esfuerzo_barras_inercia', transparent_background=False)
 
 def inercia (D1, D2):
     return np.pi * (D1 ** 4 - D2 ** 4) / 64
@@ -667,7 +670,7 @@ def revisar_falla_barras (barras, fuerzas_maximas):
     return factor_utilizacion
 
 def visualizar_factor_utilizacion(barras, facotres_utilizacion):
-    plotter = pv.Plotter()
+    plotter = pv.Plotter(window_size=[1920, 1080])
     nodes = np.array([ops.nodeCoord(tag) for tag in ops.getNodeTags()])
 
     lines = []
@@ -717,7 +720,7 @@ def visualizar_factor_utilizacion(barras, facotres_utilizacion):
     
     # Agregar la leyenda de la escala de colores en la parte inferior
     # Agregar la barra de colores con el rango de valores de 0 a f_max
-    plotter.add_scalar_bar(title="Esfuerzo Interno Normalizado", 
+    plotter.add_scalar_bar(title="Factor Utilizacion Pandeo", 
                         position_x=0.3, position_y=0.05, 
                         width=0.4, height=0.05, 
                         label_font_size=10, title_font_size=12, 
@@ -728,54 +731,80 @@ def visualizar_factor_utilizacion(barras, facotres_utilizacion):
 
     plotter.show_axes()
     plotter.show()
+    plotter.screenshot(filename='INFORME/GRAFICOS_DISENO_LUKAS/factor_utilizacion_pandeo', transparent_background=False)
 
-def exportar_hf5 ():
-    global nodos_fijos
-    #NEsecito entregar un array con las coordenadas nodes_xyz
-    #Otro array con los numeros de nodos nodes_tags
-    #Otro array con los numeros de los element elements_tags
-    #Otro array elements_section_info
-    #otro array elements_connectivities
+def exportar_hf5():
+    global nodos_fijos, barras
+    # Necesito entregar un array con las coordenadas nodes_xyz
+    # Otro array con los numeros de nodos nodes_tags
+    # Otro array con los numeros de los elementos elements_tags
+    # Otro array elements_section_info
+    # Otro array elements_connectivities
 
-    nodes = (ops.getNodeTags())
-    nodes_tags = np.array(nodes)
-    nodes_xyz = np.array([ops.nodeCoord(tag) for tag in nodes])
-    nodes_fixities = np.array(nodos_fijos)
+    # Obtener los tags de los nodos y asegurarse de que sean enteros
+    nodes = ops.getNodeTags()
     
-    elements_tags = ([i for i in range(1, len(barras)+1)])
-    elements_connectivities = np.array([[barras[i][1], barras[i][2]] for i in range(len(barras))])
-
+    # Obtener las coordenadas de los nodos y asegurarse de que sean floats
+    nodes_xyz = np.array([ops.nodeCoord(tag) for tag in nodes], dtype=float)
+    nodes_tags = np.array(nodes, dtype=int)
+    
+    # Asegurarse de que nodos_fijos sea un array de enteros
+    # Asumimos que nodos_fijos es una lista de listas: [node_tag, fix_x, fix_y, fix_z]
+    nodos_fijos_int = []
+    for fij in nodos_fijos:
+        # Convertir cada elemento a entero
+        try:
+            fij_int = [int(f) for f in fij]
+            nodos_fijos_int.append(fij_int)
+        except ValueError as e:
+            raise ValueError(f"Error al convertir restricciones de nodo {fij}: {e}")
+    
+    nodes_fixities = np.array(nodos_fijos_int, dtype=int)
+    
+    # Definir los tags de los elementos como enteros
+    elements_tags = np.array([i for i in range(1, len(barras)+1)], dtype=int)
+    
+    # Definir las conectividades de los elementos como enteros
+    try:
+        elements_connectivities = np.array([[int(barra[1]), int(barra[2])] for barra in barras], dtype=int)
+    except ValueError as e:
+        raise ValueError(f"Error al convertir conectividades de elementos: {e}")
+    
+    # Preparar la información de sección de los elementos
     elements_section_info = []
     for element in barras:
-        if element[3] == 'Rope':
-            elements_section_info.append([D2_Rope, (D1_Rope-D2_Rope)/2])
-        elif element[3] == 'XS':
-            elements_section_info.append([D2_ExtraS, (D1_ExtraS-D2_ExtraS)/2])
-        elif element[3] == 'S':
-            elements_section_info.append([D2_Small, (D1_Small-D2_Small)/2])
-        elif element[3] == 'M':
-            elements_section_info.append([D2_Medium, (D1_Medium-D2_Medium)/2])
-        elif element[3] == 'L':
-            elements_section_info.append([D2_Large, (D1_Large-D2_Large)/2])
-        elif element[3] == 'XL':
-            elements_section_info.append([D2_ExtraL, (D1_ExtraL-D2_ExtraL)/2])
+        seccion = element[3]
+        if seccion == 'Rope':
+            elements_section_info.append([D2_Rope, (D1_Rope - D2_Rope)/2])
+        elif seccion == 'XS':
+            elements_section_info.append([D2_ExtraS, (D1_ExtraS - D2_ExtraS)/2])
+        elif seccion == 'S':
+            elements_section_info.append([D2_Small, (D1_Small - D2_Small)/2])
+        elif seccion == 'M':
+            elements_section_info.append([D2_Medium, (D1_Medium - D2_Medium)/2])
+        elif seccion == 'L':
+            elements_section_info.append([D2_Large, (D1_Large - D2_Large)/2])
+        elif seccion == 'XL':
+            elements_section_info.append([D2_ExtraL, (D1_ExtraL - D2_ExtraL)/2])
+        else:
+            raise ValueError(f"Sección desconocida: {seccion}")
+    
+    elements_section_info = np.array(elements_section_info, dtype=float)
+    
+    # Convertir panel_nodes a enteros
+    panel_nodes = np.array(conexiones_paneles, dtype=int)
+    
+    # Guardar en el archivo HDF5 con los tipos de datos correctos
+    with h5py.File('CajaSatelite.h5', 'w') as hf5:
+        hf5.create_dataset('nodes_tags', data=nodes_tags)
+        hf5.create_dataset('nodes_xyz', data=nodes_xyz)
+        hf5.create_dataset('nodes_fixities', data=nodes_fixities)
+        hf5.create_dataset('elements_tags', data=elements_tags)
+        hf5.create_dataset('elements_connectivities', data=elements_connectivities)
+        hf5.create_dataset('elements_section_info', data=elements_section_info)
+        hf5.create_dataset('panel_nodes', data=panel_nodes)
 
-    elements_section_info = np.array(elements_section_info)
-
-    panel_nodes = np.array(conexiones_paneles)
-
-    #AHora lo guardo en el archivo
-    hf5 = h5py.File('CajaSatelite.h5', 'w')
-
-    hf5['nodes_tags'] = nodes_tags
-    hf5['nodes_xyz'] = nodes_xyz
-    hf5['nodes_fixities'] = nodes_fixities
-    hf5['elements_tags'] = elements_tags
-    hf5['elements_connectivities'] = elements_connectivities
-    hf5['elements_section_info'] = elements_section_info
-    hf5['panel_nodes'] = panel_nodes
-
-    hf5.close()
+    print("Datos exportados exitosamente a 'CajaSatelite.h5'\n")
 
 # Función principal
 def main():
@@ -852,7 +881,7 @@ def main():
     conexiones_paneles.append([nodos_barras[2][1][0], nodos_barras[3][1][0], nodos_barras[0][1][0]])
 
     # Visualizar la estructura
-    #visualizar_caja_satelite(caras_caja, barras, conexiones_paneles)
+    visualizar_caja_satelite(caras_caja, barras, conexiones_paneles)
 
     # Acumular masas y asignar masas a los nodos
     acumular_masa_barras_en_nodos()
@@ -883,10 +912,10 @@ def main():
 
     print(f'La fuerza maxima experimentada por inercia es de {(max(fuerzas_maximas.values()))/1000} kN \n')
 
-    #graficar_mapa_calor_inercia(barras, fuerzas_maximas)
+    graficar_mapa_calor_inercia(barras, fuerzas_maximas)
             
-    #factores_utilizacion = revisar_falla_barras(barras, fuerzas_maximas)
-    #visualizar_factor_utilizacion(barras, factores_utilizacion)
+    factores_utilizacion = revisar_falla_barras(barras, fuerzas_maximas)
+    visualizar_factor_utilizacion(barras, factores_utilizacion)
 
     # Análisis Térmico
     realizar_analisis_termico()
@@ -903,7 +932,7 @@ def main():
 
     print(f'La angulacion maxima experimentada en un panel es de {angulo_max} grados')
 
-    #isualizar_desplazamiento_termico(barras, conexiones_paneles, escala=1000)
+    visualizar_desplazamiento_termico(barras, conexiones_paneles, escala=1000)
 
 
 
