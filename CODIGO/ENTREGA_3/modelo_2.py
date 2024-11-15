@@ -69,7 +69,7 @@ def exportar_hf5():
     panel_nodes = np.array(paneles_nodos , dtype=int)
     
     # Guardar en el archivo HDF5 con los tipos de datos correctos
-    with h5py.File('CODIGO/ENTREGA_3/modelo_2.h5', 'w') as hf5:
+    with h5py.File('CODIGO/ENTREGA_3/propuesta2.h5', 'w') as hf5:
         hf5.create_dataset('nodes_tags', data=nodes_tags)
         hf5.create_dataset('nodes_xyz', data=nodes_xyz)
         hf5.create_dataset('nodes_fixities', data=nodes_fixities)
