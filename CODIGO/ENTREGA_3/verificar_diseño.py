@@ -106,7 +106,7 @@ for i in range(len(elements_tags)):
 masa_nodal = {tag: 0.0 for tag in nodes_tags}
 
 # Calcular masa de las barras y asignarla a los nodos
-masa_total_barras = 0
+masa_total_barras=0
 for i in range(len(elements_tags)):
     element_id = int(elements_tags[i])
     nodo_i = int(elements_connectivities[i][0])

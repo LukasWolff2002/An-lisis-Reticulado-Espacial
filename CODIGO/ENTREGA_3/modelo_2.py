@@ -9,7 +9,7 @@ limite2= 36 #Que tan ancha es la estructura
 gamma_fibra_carbono = 1.91 * 1000
 E_fibra_carbono = 338e9
 gamma_panel = 1.1
-D1, D2 = 0.0126 , 0.0001
+D1, D2 = 0.011 , 0.0001
 A =np.pi*(D1**2-D2**2)/4
 
 ops.wipe()  
@@ -109,14 +109,14 @@ def masa_nodos(nodos_totales, members, gamma_fibra_carbono):
     masa_estructura = 0  # Inicializamos la masa total de la estructura
     for member in members:
         nodo_i, nodo_j = member  # Extraer los nodos de cada miembro
-        # Calcular la longitud del miembro
+        
         largo = np.linalg.norm(nodos_totales[nodo_i] - nodos_totales[nodo_j])
-        # Masa del miembro dividido entre los dos nodos
+        
         masa_miembro = gamma_fibra_carbono * A * largo / 2
-        # Sumar mitad de la masa del miembro a cada nodo
+        
         masas_nodos[nodo_i] += masa_miembro
         masas_nodos[nodo_j] += masa_miembro
-        # Sumar la masa total de la estructura
+        
         masa_estructura += masa_miembro * 2
 
     print("Masa total de la estructura:", masa_estructura)
@@ -196,14 +196,14 @@ def area_paneles_solares(nodos_paneles_solares1, nodos_paneles_solares2):
 #---------------------------------------------------------------------------------------------------------DEFINICIÓN DEL MODELO
 # Definición inicial de nodos y apoyos
 nodos_caja = np.array([
-    [3.3, 3.9, 1.3],
-    [3.3, -3.9, 1.3],
-    [3.3, -3.9, -1.3],
-    [3.3, 3.9, -1.3],
-    [-3.3, 3.9, 1.3],
-    [-3.3, -3.9, 1.3],
-    [-3.3, -3.9, -1.3],
-    [-3.3, 3.9, -1.3]
+    [ 3.9, 3.3, 1.3],
+    [-3.9, 3.3, 1.3],
+    [-3.9, 3.3, -1.3],
+    [ 3.9, 3.3,-1.3],
+    [ 3.9,-3.3, 1.3],
+    [-3.9,-3.3, 1.3],
+    [-3.9,-3.3,-1.3],
+    [ 3.9,-3.3,-1.3]
 ])
 nodos_totales = nodos_caja
 caras_caja = [
@@ -216,8 +216,8 @@ caras_caja = [
 ]
 
 L0=1.3
-L1=3.3
-L2=3.9
+L1=3.9
+L2=3.3
 
 apoyos_der = np.array([
     [ L1, L2,-L0],
