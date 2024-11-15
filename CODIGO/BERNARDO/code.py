@@ -1,6 +1,7 @@
 import numpy as np
 import pyvista as pv
 import openseespy.opensees as ops
+import h5py
 #PARÁMETROS DE ENTRADA
 limite1= 20 #Que tan largo desde la caja es la estructura
 limite2= 36 #Que tan ancha es la estructura
@@ -16,6 +17,68 @@ ops.model('basic', '-ndm', 3, '-ndf', 3)
 
 # Definición de materiales
 ops.uniaxialMaterial('Elastic', 1, E_fibra_carbono)
+
+def exportar_hf5():
+    global nodos_totales, members, paneles_nodos
+    barras=members
+    # Necesito entregar un array con las coordenadas nodes_xyz
+    # Otro array con los numeros de nodos nodes_tags
+    # Otro array con los numeros de los elementos elements_tags
+    # Otro array elements_section_info
+    
+    # Otro array elements_connectivities
+
+    # Obtener los tags de los nodos y asegurarse de que sean enteros
+    nodes = ops.getNodeTags()
+    
+    
+    # Obtener las coordenadas de los nodos y asegurarse de que sean floats
+    nodes_xyz = np.array([ops.nodeCoord(tag) for tag in nodes], dtype=float)
+    nodes_tags = np.array(nodes, dtype=int)
+    
+    # Asegurarse de que nodos_fijos sea un array de enteros
+    # Asumimos que nodos_fijos es una lista de listas: [node_tag, fix_x, fix_y, fix_z]
+    nodos_fijos = []
+    k=0
+    for i, nodo in enumerate(nodes_tags):
+        if i < 14:
+            nodos_fijos.append([nodo, 1, 1, 1])  # Nodo fijo en x, y, z
+        else:
+            nodos_fijos.append([nodo, 0, 0, 0])  # Nodo libre en x, y, z
+    
+    # Convertir las fijaciones a un array de enteros
+    nodes_fixities = np.array(nodos_fijos, dtype=int)
+    
+    # Crear un array con los tags de los elementos
+    elements_tags = np.array([i + 1 for i in range(len(barras))], dtype=int)
+
+    # Definir las conectividades de los elementos como enteros
+    try:
+        elements_connectivities = np.array([[int(barra[0]), int(barra[1])] for barra in barras], dtype=int)
+    except ValueError as e:
+        raise ValueError(f"Error al convertir conectividades de elementos: {e}")
+    
+    # Preparar la información de sección de los elementos
+    elements_section_info = []
+    for i in barras:
+        elements_section_info.append([D2, (D1 - D2)/2])
+
+    elements_section_info = np.array(elements_section_info, dtype=float)
+    
+    # Convertir panel_nodes a enteros
+    panel_nodes = np.array(paneles_nodos , dtype=int)
+    
+    # Guardar en el archivo HDF5 con los tipos de datos correctos
+    with h5py.File('Caja_bernardo.h5', 'w') as hf5:
+        hf5.create_dataset('nodes_tags', data=nodes_tags)
+        hf5.create_dataset('nodes_xyz', data=nodes_xyz)
+        hf5.create_dataset('nodes_fixities', data=nodes_fixities)
+        hf5.create_dataset('elements_tags', data=elements_tags)
+        hf5.create_dataset('elements_connectivities', data=elements_connectivities)
+        hf5.create_dataset('elements_section_info', data=elements_section_info)
+        hf5.create_dataset('panel_nodes', data=panel_nodes)
+
+    print("Datos exportados exitosamente a 'Caja_bernardo.h5'\n")
 
 def plot_paneles_solares(plotter, nodos_paneles_solares1, nodos_paneles_solares2):
 
@@ -116,7 +179,6 @@ def area_paneles_solares(nodos_paneles_solares1, nodos_paneles_solares2):
         punto1 = np.array(panel[0])
         punto2 = np.array(panel[1])
         punto3 = np.array(panel[2])
-
 
         # Calcular el vector AB y AC
         vector_ab = punto2 - punto1
@@ -341,6 +403,11 @@ nodos_totales, members, nodos_paneles_solares1 = trusselatorder(limite1, limite2
 nodos_paneles_solares=[[],[]]
 nodos_totales, members, nodos_paneles_solares2 = trusselatorizq(limite1, limite2, nodos_totales, members, nodos_paneles_solares, L0, L1, L2)
 
+
+nodos_paneles=[]
+for i in range(len(nodos_paneles_solares1[0])):
+    nodos_paneles.append(nodos_paneles_solares1[0][i])
+
 #---------------------------------------------------------------------------------------------------------DEFINICIÓN DEL MODELO
 #---------------------------------------------------------------------------------------------------------EJECUCIÓN DEL MODELO
 for i, nodo in enumerate(nodos_totales):
@@ -383,6 +450,18 @@ frecuencias = [np.sqrt(eigenval) / (2 * np.pi) for eigenval in eigenvalues]
 for i, freq in enumerate(frecuencias, start=1):
     print(f"Frecuencia del modo {i}: {freq:.8f} Hz")
 
+paneles_nodos = []
+
+for panel in paneles:
+        panel_nodos = []
+        for coordenada in panel:
+            # Buscar la coordenada en nodos_totales y obtener su índice
+            nodo_index = np.where((nodos_totales == coordenada).all(axis=1))[0]
+            if nodo_index.size > 0:
+                panel_nodos.append(int(nodo_index[0]))  # Guardar el índice del nodo
+            else:
+                raise ValueError(f"Coordenada {coordenada} no encontrada en nodos_totales.")
+        paneles_nodos.append(panel_nodos)
 
 #---------------------------------------------------------------------------------------------------------EJECUCIÓN DEL MODELO
 plotter = pv.Plotter()
@@ -406,8 +485,18 @@ for member in members:
 
 plot_paneles_solares(plotter, nodos_paneles_solares1, nodos_paneles_solares2)
 
+# Agregar etiquetas a todos los nodos
+# for idx, nodo in enumerate(nodos_totales):
+#     plotter.add_point_labels([nodo], [f"{idx+1}"], font_size=10, text_color="blue")
+
+
 
 # Visualización final
 plotter.add_axes()
 plotter.show()
 
+
+
+
+
+exportar_hf5()
