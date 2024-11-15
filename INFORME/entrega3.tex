@@ -2,59 +2,68 @@
 
 \section{Introducción}
 
-Este proyecto busca diseñar un datacenter orbital de 1MW para entrenar modelos de inteligencia artificial usando paneles solares en órbita. Esto se basara en la idea presentada por Lumen Orbit que busca realizar esto para datacenters de 40MW.
+Este proyecto busca diseñar un datacenter orbital de 1 MW para entrenar modelos de inteligencia artificial utilizando paneles solares en órbita. La idea se basa en el concepto presentado por Lumen Orbit, que propone implementar datacenters de 40 MW en el espacio.
 
-El objetivo de este informe es presentar dos diseños de estrcuturas para este datacenter, de forma de cumplir ciertas especificaciones de diseño y de operación. Donde los principales requerimientos son la capacidad de generar 1MW de energía, para lo cual se necesitaran de 3.334 $m^2$ de paneles solares. Además, se deben cumplir ciertas condiciones de diseño, como que la fracción de masa debe ser menor al 30\%, la frecuencia del primer modo debe ser mayor a 0.1Hz, la desangulación para un cambio de temperatura de 150\textdegree{}C debe ser menor a 2\textdegree{} y se debe cumplir con un factor de seguridad de 2.
+El objetivo de este informe es presentar dos diseños de estructuras para este datacenter, de forma que cumplan con ciertas especificaciones de diseño y operación. Los principales requerimientos incluyen la capacidad de generar 1 MW de energía, lo que requiere 3,334 $m^2$ de paneles solares. Además, se deben cumplir condiciones de diseño específicas, tales como:\\
+- La fracción de masa debe ser menor al 30\%.\\
+- La frecuencia del primer modo debe ser mayor a 0.1 Hz.\\
+- La desangulación para un cambio de temperatura de 150 \textdegree{}C debe ser menor a 2 \textdegree.\\
+- Debe cumplirse con un factor de seguridad de 2.
 
-Dentro de las especificaiones del satelite, este sera un rectangulo de 6.6 m x 2.6 m x 7.8 m y el material de la estructura de los paneles solares sera de fibra de carbono de alto modulo M55J. Dentro de las consideraciones el peso de al estrcutura y satelite no se consideranran como un priblema, solo que la estructura sea lo suficientemente rigida para soportar una aceleracion de 0.1g en cualquier direccion. 
+Dentro de las especificaciones del satélite, este será un rectángulo de 6.6 m x 2.6 m x 7.8 m, y el material de la estructura de los paneles solares será fibra de carbono de alto módulo M55J. Entre las consideraciones adoptadas, el peso de la estructura y del satélite no se considerará un problema, siempre y cuando la estructura sea lo suficientemente rígida para soportar una aceleración de 0.1 g en cualquier dirección.
 
-Para llevar a cabo este estudio se utilizara el software de diseño de estructuras OpenSeesPy, el cual permite realizar análisis de elementos finitos de estructuras. Además, se utilizaran otros para la visualización de los resultados obtenidos. El objetivo de cada diseño es cumplir con los requerimientos de diseño y operación, y a la vez minimizar el peso total y el momento de inercia de todo este datacenter.
+Para llevar a cabo este estudio se utilizará el software de diseño de estructuras OpenSeesPy, que permite realizar análisis de elementos finitos en estructuras. Además, se emplearán otras herramientas para la visualización de los resultados obtenidos. El objetivo de cada diseño es cumplir con los requerimientos de diseño y operación, minimizando a la vez el peso total y el momento de inercia de todo el datacenter.
 
 \newpage
 \section{Condiciones de diseño y operación}
 
-Para el desarrollo de esta estructura se buscan cumplir ciertas condiciones de diseño y operación, además, de asumir otras para simplificar el estudio del problema. 
+Para el desarrollo de esta estructura, se busca cumplir con ciertas condiciones de diseño y operación, además de asumir otras para simplificar el estudio del problema. 
 
-Dentro de las condiciones de diseño estan:
+Las condiciones de diseño son las siguientes:
 
 \begin{itemize}
     \item Una potencia de 1 MW, considerando que los paneles solares tienen una eficiencia de 300 W/$m^2$.
     \item El peso de los paneles solares es de 1.1 kg/$m^2$.
     \item La fracción de masa debe ser menor al 30\%.
-    \item La frecuencia del primer modo debe ser mayor a 0.1Hz.
-    \item la estructura puede tener una aceleracion de 0.1g en cualquier direccion.
-    \item La desangulación para un cambio de temperatura de 150\textdegree{}C debe ser menor a 2\textdegree.
+    \item La frecuencia del primer modo debe ser mayor a 0.1 Hz.
+    \item La estructura puede experimentar una aceleración de 0.1 g en cualquier dirección.
+    \item La desangulación para un cambio de temperatura de 150 \textdegree{}C debe ser menor a 2 \textdegree.
     \item Se debe cumplir con un factor de seguridad de 2.
-    \item Se utilizara el material compuesto de fibra de carbono de alto modulo M55J.
-    \item El reticulado se puede apoyar de cualquier forma en el satelite.
-    \item El satelite sera un rectangulo de 6.6 m x 2.6 m x 7.8 m.
+    \item Se utilizará el material compuesto de fibra de carbono de alto módulo M55J.
+    \item El reticulado se puede apoyar de cualquier forma en el satélite.
+    \item El satélite será un rectángulo de 6.6 m x 2.6 m x 7.8 m.
 \end{itemize}
 
-Luego a medida que se fue realizando el diseño se fueron asumiendo ciertas condiciones apartes de las ya nombradas, estas son:
+Además, a medida que se realizó el diseño, se asumieron ciertas condiciones adicionales aparte de las ya mencionadas. Estas son:
 
 \begin{itemize}
-    \item El peso de la estructura y satelite no se consideran como un problema, pero si se busca minimizarlo.
-    \item Se utilizaran distintas barras para la estructura, las cuales se deciden para optimizar la masa de la estructura.
-    \item Los nodos del 1 al 8 son los nodos que conforman el satelite y estan fijos en el espacio.
+    \item El peso de la estructura y el satélite no se considera como un problema principal, pero se busca minimizarlo.
+    \item Se utilizarán distintas barras para la estructura, las cuales se seleccionarán para optimizar la masa de la misma.
+    \item Los nodos del 1 al 8 conforman el satélite y están fijos en el espacio.
 \end{itemize}
 
-\newpage
-\section{Propuesta 1}
 
-En esta propuesta se considero que la estructura seria un reticulado de barras donde saldrian 4 "brazos" del satelite, donde se utilizan barras de distintos tamaños para optimizar la masa de la estructura. Este diseño se decidio ya que al ser 4 brazos independientes uno del otro seria facil de manipular en el sofware en el que se estudia la estructura. Además, cabe mencionar que este diseño se baso, aunque no es del todo igual, del diseño de SpideWeb del (citar trussselator), donde se puede ver que este diseño tiene 8 brazos, aunque en base a la prueba y error la llevamos a solo 4 brazos, asi minimizar la masa de estructura manteniendo todos los criterios necesarios. Quedando de la siguinte forma: 
+\newpage
+\section{Diseño de la estructura}
+
+A continuación, se presentan dos propuestas de diseño para la estructura del datacenter orbital. Además, se incluye un estudio de las condiciones de diseño y operación para cada una de estas propuestas. En este caso, se realizó un mayor número de estudios a una de las propuestas, ya que se consideró que era la más óptima y factible de mejorar en caso de no cumplir ciertos criterios.
+
+\subsection{Propuesta 1}
+
+En esta propuesta, se consideró que la estructura sería un reticulado de barras con cuatro "brazos" que se extienden desde el satélite. Se utilizaron barras de distintos tamaños para optimizar la masa de la estructura. Este diseño se eligió porque, al contar con cuatro brazos independientes entre sí, resulta más fácil de manipular en el software utilizado para estudiar la estructura. Además, cabe mencionar que este diseño se basó, aunque no de forma idéntica, en el diseño SpideWeb del (citar TRUSSELATOR). Dicho diseño original cuenta con ocho brazos, pero mediante pruebas y ajustes se redujo a solo cuatro, logrando así minimizar la masa de la estructura manteniendo todos los criterios necesarios. La propuesta se visualiza de la siguiente manera:
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{GRAFICOS_DISENO_LUKAS/diseño_satelite.png}
-    \caption{Diseño de la propuesta 1 para el satelite}
+    \caption{Diseño de la propuesta 1 para el satélite}
     \label{fig:propuesta1}
 \end{figure}
 
-Como se dijo anteriormente, se puede apreciar los 4 "brazos" que salen del satelite, donde se puede ver que cada uno de estos tiene la misma distancia y la existencia de 5 tipos de barras, esto criterio lo realizo pyhton de forma de optimizar la masa de la estrcutura y cumplir con los requerimientos de diseño.
+Como se mencionó anteriormente, se pueden observar los cuatro "brazos" que se extienden desde el satélite. Cada uno de ellos tiene la misma distancia y consta de cinco tipos de barras. Este criterio fue definido mediante un código en Python para optimizar la masa de la estructura y cumplir con los requerimientos de diseño.
 
-\subsection{Análisis de la estructura}
+\subsubsection{Análisis de la estructura}
 
-A continuacion se mostraran los resultados de los criterios exigidos para el diseño de la estructura.
+A continuación, se presentan los resultados de los criterios exigidos para el diseño de la estructura.
 
 \begin{figure}[H]
     \centering
@@ -63,27 +72,27 @@ A continuacion se mostraran los resultados de los criterios exigidos para el dis
     \label{fig:propuesta1_ei}
 \end{figure}
 
-En la figura \ref{fig:propuesta1_ei} se puede ver que el esfuerzo interno de las barras disminuye a medida que uno se aleja del satelite. Esto se debe a que las barras mas cercanas al satelite son las que soportan la mayor parte de la carga, por lo que se ven mas afectadas por esta.
+En la Figura \ref{fig:propuesta1_ei}, se observa que el esfuerzo interno de las barras disminuye a medida que se alejan del satélite. Esto ocurre porque las barras más cercanas al satélite soportan la mayor parte de la carga, siendo más afectadas por ella.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{GRAFICOS_DISENO_LUKAS/factor_utilizacion_pandeo.png}
-    \caption{Pandeo de la estrcutura}
+    \caption{Pandeo de la estructura}
     \label{fig:propuesta1_pandeo}
 \end{figure}
 
-En la figura \ref{fig:propuesta1_pandeo}, esto es un factor a tener en cuenta, ya que, las barras es mas probable que fallen por pandeo, es por eso que lass barras se decidieron para que cumplieran todo los criterios y con un factor de seguridad de 2.
+En la Figura \ref{fig:propuesta1_pandeo}, se muestra el análisis de pandeo. Este factor es crítico, ya que las barras tienen mayor probabilidad de fallar por este fenómeno. Por ello, se seleccionaron las barras de manera que cumplieran con todos los criterios, considerando un factor de seguridad de 2.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{GRAFICOS_DISENO_LUKAS/desplazamiento_termico.png}
-    \caption{Desplazamiento termico de la estrcutura}
+    \caption{Desplazamiento térmico de la estructura}
     \label{fig:propuesta1_termico}
 \end{figure}
 
-En la figura \ref{fig:propuesta1_termico} se puede apreciar el desplazamiento termico, donde se asumio que solamente las barras que estan junta al panel solar son las que se ven afectadas por el cambio de temperatura, esto ya que reciben el calor directamente.
+En la Figura \ref{fig:propuesta1_termico}, se aprecia el desplazamiento térmico. Se asumió que únicamente las barras adyacentes al panel solar son afectadas por el cambio de temperatura, ya que estas reciben el calor de manera directa.
 
-Finalmente, mediante un código llamado verificar\_diseño.py se obtuvieron los siguientes resultados:
+Finalmente, mediante un código denominado \texttt{verificar\_diseño.py} se obtuvieron los siguientes resultados:
 
 \begin{table}[H]
     \centering
@@ -103,24 +112,24 @@ Finalmente, mediante un código llamado verificar\_diseño.py se obtuvieron los 
     $\theta_\text{all\_max}$        & 0.03208818380943898                & \textbf{True}   \\ \hline
     Cumple $\theta_\text{max}$      & -                                   & \textbf{True}   \\ \hline
     \end{tabular}
-    \caption{Resultados de la propuesta numero 1 para verificar si el diseño cumple.}
+    \caption{Resultados de la propuesta número 1 para verificar si el diseño cumple.}
     \label{tabla:modelo_h5_p1}
 \end{table}
     
-Donde se puede apreciar que se cumplen casi todos los criterios, menos RME y la frecuencia fundamental.
-
+Como se observa, se cumplen casi todos los criterios, excepto el RME y la frecuencia fundamental.
 
 \newpage
-\section{Propuesta 2}
+\subsection{Propuesta 2}
 
-En este caso el diseño tine una forma de H, donde se decidio llevar a cabo este diseño, ya que se considero que podia ser un buen punto medio entre la masa de la estructura y su rigidez. Este diseño tambien se baso en el diseño presentado en (Citar trussselator). quedando de la siguiente forma:
+En este caso, el diseño tiene una forma de H, y se decidió llevar a cabo este diseño ya que se consideró que podía ser un buen punto medio entre la masa de la estructura y su rigidez. Este diseño también se basó en el diseño presentado en (Citar TRUSSELATOR), quedando de la siguiente forma:
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{GRAFICOS_DISENO_BENO/propuesta2.png}
-    \caption{Diseño de la propuesta 2 para el satelite}
+    \caption{Diseño de la propuesta 2 para el satélite}
     \label{fig:propuesta2}
 \end{figure}
+
 
 \newpage
 \section{Comparación de propuestas}
@@ -129,7 +138,7 @@ En este caso el diseño tine una forma de H, donde se decidio llevar a cabo este
 \newpage
 \section{Propuesta final}
 
-Luego de comparar ambas propuestas, se decidio que la propuesta 1 es la que cumple con todos los criterios de diseño y operación, por lo que se decidio que esta es la mejor propuesta para el diseño del datacenter orbital de 1MW. Además, esta propuesta es la que minimiza el peso total y el momento de inercia de todo el datacenter. Luego otro criterio utilizado para elegir este diseño es que al ser 4 brazos independientes unos de otros, al tener cualquier complicacion es mas facil de trabajar en el software de diseño de estructuras OpenSeesPy por lo que se seguira con este diseño para el resto del proyecto.
+Luego de comparar ambas propuestas, se decidió que la propuesta 1 es la que cumple con una mayor cantidad de requisitos de diseño. Además, se consideró que este diseño tiene una mejor trabajabilidad, por lo que realizarle los cambios necesarios para cumplir completamente con las condiciones de diseño y operación es más factible. Uno de los factores por los cuales se descartó la propuesta 2 es que las deformaciones térmicas son muy grandes, lo que podría afectar el funcionamiento del satélite, además de que cumple con una menor cantidad de condiciones de diseño.
 
 \begin{figure}[H]
     \centering
@@ -138,4 +147,4 @@ Luego de comparar ambas propuestas, se decidio que la propuesta 1 es la que cump
     \label{fig:propuesta1}
 \end{figure}
 
-Aunque como se puede apreciar en la tabla \ref{tabla:modelo_h5_p1} no se cumplen todos los criterios, pero se decidio que ese proyecto es mas factible y se puede mejorar para que cumpla todos los requesitos de diseño y operación.
+Como se puede apreciar en la tabla \ref{tabla:modelo_h5_p1}, no se cumplen todos los criterios, pero se decidió que este proyecto es más factible y se puede mejorar para que cumpla con todos los requisitos de diseño y operación. El principal objetivo a continuación es que la estructura cumpla con el porcentaje de RME y alcance la frecuencia fundamental esperada. Una vez logrado esto, se podrá optimizar la estructura para que sea lo más eficiente posible.
