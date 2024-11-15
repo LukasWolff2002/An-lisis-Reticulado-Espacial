@@ -398,7 +398,7 @@ def realizar_analisis_termico():
         area = area_dict.get(barra[3])
         if area is None:
             raise ValueError(f"Sección desconocida: {barra[3]}")
-
+        
         # Reemplazar el elemento con el nuevo material
         ops.element('Truss', barra_actual, barra[1], barra[2], area, matTag_with_thermal, '-rho', gamma_fibra_carbono)
         barra_actual += 1
@@ -750,7 +750,9 @@ def exportar_hf5():
     
     # Asegurarse de que nodos_fijos sea un array de enteros
     # Asumimos que nodos_fijos es una lista de listas: [node_tag, fix_x, fix_y, fix_z]
+    # Asegurarse de que 'nodos_fijos' es una lista de listas: [node_tag, fix_x, fix_y, fix_z]
     nodos_fijos_int = []
+    
     for fij in nodos_fijos:
         # Convertir cada elemento a entero
         try:
@@ -759,7 +761,23 @@ def exportar_hf5():
         except ValueError as e:
             raise ValueError(f"Error al convertir restricciones de nodo {fij}: {e}")
     
-    nodes_fixities = np.array(nodos_fijos_int, dtype=int)
+    # Crear un conjunto de nodos fijos para facilitar la búsqueda
+    fixed_nodes = set([fij[0] for fij in nodos_fijos_int])
+    
+    # Obtener todos los nodos
+    all_nodes = set(ops.getNodeTags())
+    
+    # Identificar nodos libres (no están en 'fixed_nodes')
+    free_nodes = all_nodes - fixed_nodes
+    
+    # Asignar [nodo, 0, 0, 0] a los nodos libres
+    nodos_libres_int = [[int(node), 0, 0, 0] for node in free_nodes]
+    
+    # Combinar nodos fijos y libres
+    nodos_fixities_combined = nodos_fijos_int + nodos_libres_int
+    
+    # Convertir a un arreglo NumPy
+    nodes_fixities = np.array(nodos_fixities_combined, dtype=int)
     
     # Definir los tags de los elementos como enteros
     elements_tags = np.array([i for i in range(1, len(barras)+1)], dtype=int)

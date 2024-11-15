@@ -7,7 +7,7 @@ import h5py
 print('Revisando el diseño en modelo.h5 \n')
 
 # Cargar los datos desde el archivo HDF5
-f = h5py.File('CajaSatelite.h5', 'r')
+f = h5py.File('Caja_bernardo.h5', 'r')
 
 nodes_tags = f['nodes_tags'][()]
 nodes_xyz = f['nodes_xyz'][()]
@@ -18,6 +18,15 @@ elements_section_info = f['elements_section_info'][()]
 panel_nodes = f['panel_nodes'][()]
 
 f.close()
+
+#Vamos a verificar si cumple con los requerimientos de diseño
+nodos_fijos = 0
+for elemenot in nodes_fixities:
+    if elemenot[1] == 1 or elemenot[2] == 1 or elemenot[3] == 1:
+        nodos_fijos += 1
+        
+nodos_apoyos = nodes_tags[8:nodos_fijos]
+
 
 # Asegurarse de que nodes_tags sean enteros
 nodes_tags = nodes_tags.astype(int)
@@ -62,6 +71,7 @@ for i, tag in enumerate(nodes_tags):
         # Si hay restricciones para este nodo
         fixity = fixity_rows[0][1:]  # [fx, fy, fz]
         fixity = [int(f) for f in fixity]  # Asegurar que son enteros
+        print('restinjo el nodo', tag, fixity)
         ops.fix(int(tag), *fixity)
     else:
         # Si no hay restricciones, dejar el nodo libre
@@ -138,9 +148,9 @@ print(f'Masa total panel \t: {masa_total_panel:.2f} kg')
 RME = (masa_total_barras / masa_total_panel) * 100
 print(f'RME \t\t\t: {RME:.2f}%')
 if RME > 20:
-    print('Cumple RME \t\t: False')
+    print('Cumple RME \t\t: False \n')
 else:
-    print('Cumple RME \t\t: True')
+    print('Cumple RME \t\t: True \n')
 
 # Asignar masas a los nodos
 for tag in nodes_tags:
@@ -205,8 +215,6 @@ def realizar_analisis_inercial(aceleraciones):
 # Realizar el análisis modal
 eigenfrequencies = realizar_analisis_frecuencias(num_modes=10)
 
-print(f'Frecuencia Fundamental \t: {eigenfrequencies[0]:.3f} Hz \n')
-
 # Realizar análisis inercial
 aceleracion_magnitud = 0.1 * 9.81  # 0.1g
 aceleraciones = [
@@ -216,7 +224,189 @@ aceleraciones = [
 ]
 fuerzas_maximas = realizar_analisis_inercial(aceleraciones)
 
-print(f'La fuerza máxima experimentada por inercia es de {max(fuerzas_maximas.values()) / 1000:.2f} kN \n')
+FS = 2
+fluencia_fibra_carbono = 2.02e9
+def revisar_falla_barras ():
+    factor_utilizacion = {}
+    pandeo = {}
+    for i in range(len(elements_tags)):
+        area = section_areas[i + 1]
+        tension =  (fuerzas_maximas[i+1]*FS)/area
+        FU = tension/fluencia_fibra_carbono
+        factor_utilizacion[elements_tags[i]]= FU
+
+        #Ahora reviso el pandeo
+        nodo_i = int(elements_connectivities[i][0])
+        nodo_j = int(elements_connectivities[i][1])
+
+        coord_i = np.array(ops.nodeCoord(nodo_i))
+        coord_j = np.array(ops.nodeCoord(nodo_j))
+
+        vector = coord_j - coord_i
+        largo_barra = np.linalg.norm(vector)
+
+        p = (fuerzas_maximas[i+1]*FS*(largo_barra**2))/((np.pi**2)*section_inertias[i+1])
+
+        pandeo[elements_tags[i]] = p
+
+       
+
+    return factor_utilizacion, pandeo
+
+
+
+
+
+factor_utilizacion, pandeo = revisar_falla_barras()
+
+fu_max = max(factor_utilizacion.values())
+if fu_max < 1:
+    print(f'Cumple resistencia \t: True 0.0 < FU < {fu_max}')
+
+else: 
+    print(f'Cumple resistencia \t: False 0.0 < FU < {fu_max}')
+
+cumple_pandeo = True
+for esfuerzos in pandeo:
+    if esfuerzos > E_fibra_carbono:
+        cumple_pandeo = False
+    
+if cumple_pandeo:
+    print('Cumple pandeo \t\t: True \n')
+
+else:
+    print('Cumple pandeo \t\t: False \n')
+
+
+
+
+
+#Analisis termico
+def analisis_termico ():
+    
+    alpha = -0.5e-6
+    delta_T = 150
+    thermal_load = alpha * delta_T
+    matTag_with_thermal = 3
+    ops.uniaxialMaterial('InitStrainMaterial', matTag_with_thermal, 1, thermal_load)
+
+    #Obtengo los nodos de los paneles
+    nodos_paneles_set = set()
+    for panel in panel_nodes:
+        for nodo in panel:
+            nodos_paneles_set.add(nodo)
+    
+    #Filtro las barras que conectan los nodos de los paneles
+    barras_paneles = []
+    for i in range(len(elements_tags)):
+        nodo_i = int(elements_connectivities[i][0])
+        nodo_j = int(elements_connectivities[i][1])
+        if nodo_i in nodos_paneles_set and nodo_j in nodos_paneles_set:
+            barras_paneles.append([int(elements_tags[i]), nodo_i, nodo_j])
+
+    #Aplico la carga termica a las barras de los paneles
+    barra_actual = elements_tags[-1]
+    
+    for i in range(len(barras_paneles)):
+        
+        area = section_areas[i + 1]
+        barra_actual += 1
+        ops.element('Truss', int(barra_actual), int(barras_paneles[i][1]), int(barras_paneles[i][2]), float(area), matTag_with_thermal, '-rho', gamma_fibra_carbono)
+
+    #Genero el analisis
+    ops.system('BandSPD')
+    ops.numberer('RCM')
+    ops.constraints('Plain')
+    ops.integrator('LoadControl', 1.0)
+    ops.algorithm('Linear')
+    ops.analysis('Static')
+    ops.analyze(1)
+
+def calcular_vector_normal_panel(puntos):
+    """Calcula el vector normal de un panel definido por tres puntos."""
+    A = puntos[0]
+    B = puntos[1]
+    C = puntos[2]
+    AB = B - A
+    AC = C - A
+    normal = np.cross(AB, AC)
+    norma = np.linalg.norm(normal)
+    if norma == 0:
+        return np.array([0, 0, 0])
+    normal_unitario = normal / norma
+    return normal_unitario
+
+def calcular_vectores_normales_paneles(conexiones_paneles):
+    """Calcula los vectores normales antes y después de la deformación para cada panel."""
+    lista_normales_antes = []
+    lista_normales_despues = []
+
+    # Obtener los tags de los nodos y sus coordenadas originales
+    node_tags = ops.getNodeTags()
+    coords_originales = {tag: np.array(ops.nodeCoord(tag)) for tag in node_tags}
+
+    # Obtener los desplazamientos de los nodos
+    desplazamientos = {tag: np.array(ops.nodeDisp(tag)) for tag in node_tags}
+
+    # Calcular las coordenadas deformadas
+    coords_deformadas = {tag: coords_originales[tag] + desplazamientos[tag] for tag in node_tags}
+
+    for panel in conexiones_paneles:
+        # Verificar que el panel tenga al menos 3 nodos
+        if len(panel) < 3:
+            print(f"El panel {panel} tiene menos de 3 nodos y no se puede calcular un vector normal.")
+            continue
+
+        # Obtener las coordenadas de los nodos antes y después de la deformación
+        puntos_antes = [coords_originales[nodo] for nodo in panel]
+        puntos_despues = [coords_deformadas[nodo] for nodo in panel]
+
+        # Calcular el vector normal antes y después de la deformación
+        normal_antes = calcular_vector_normal_panel(puntos_antes)
+        normal_despues = calcular_vector_normal_panel(puntos_despues)
+
+        lista_normales_antes.append(normal_antes)
+        lista_normales_despues.append(normal_despues)
+
+    return lista_normales_antes, lista_normales_despues
+
+def calcular_angulo_entre_vectores(v1, v2):
+    """Calcula el ángulo en grados entre dos vectores."""
+    dot_product = np.dot(v1, v2)
+    norma_v1 = np.linalg.norm(v1)
+    norma_v2 = np.linalg.norm(v2)
+    if norma_v1 == 0 or norma_v2 == 0:
+        return 0.0
+    cos_theta = dot_product / (norma_v1 * norma_v2)
+    cos_theta = np.clip(cos_theta, -1.0, 1.0)
+    angulo_rad = np.arccos(cos_theta)
+    angulo_deg = np.degrees(angulo_rad)
+    return angulo_deg
+        
+        
+    
+
+analisis_termico()
+lista_normal_inicial, lista_normal_final = calcular_vectores_normales_paneles(panel_nodes)
+
+angulo_max = 0
+for i in range(len(lista_normal_inicial)):
+    angulo = calcular_angulo_entre_vectores(lista_normal_inicial[i], lista_normal_final[i])
+    if angulo > angulo_max:
+        angulo_max = angulo
+    
+print(f'Frecuencia Fundamental \t: {eigenfrequencies[0]:.3f} Hz')
+if eigenfrequencies[0] > 0.1:
+    print('Cumple f1 \t\t: True')
+else:
+    print('Cumple f1 \t\t: False')
+print(f'θ_all_max \t\t: {angulo_max}')
+if angulo_max <= 2:
+    print('Cumple θ_max \t\t: True')
+
+else:
+    print('Cumple θ_max \t\t: False')
+
 
 
 
