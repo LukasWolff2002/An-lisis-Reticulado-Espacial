@@ -9,7 +9,7 @@ limite2= 36 #Que tan ancha es la estructura
 gamma_fibra_carbono = 1.91 * 1000
 E_fibra_carbono = 338e9
 gamma_panel = 1.1
-D1, D2 = 0.0126 , 0.0001
+D1, D2 = 0.011 , 0.0001
 A =np.pi*(D1**2-D2**2)/4
 
 ops.wipe()  
@@ -109,14 +109,14 @@ def masa_nodos(nodos_totales, members, gamma_fibra_carbono):
     masa_estructura = 0  # Inicializamos la masa total de la estructura
     for member in members:
         nodo_i, nodo_j = member  # Extraer los nodos de cada miembro
-        # Calcular la longitud del miembro
+        
         largo = np.linalg.norm(nodos_totales[nodo_i] - nodos_totales[nodo_j])
-        # Masa del miembro dividido entre los dos nodos
+        
         masa_miembro = gamma_fibra_carbono * A * largo / 2
-        # Sumar mitad de la masa del miembro a cada nodo
+        
         masas_nodos[nodo_i] += masa_miembro
         masas_nodos[nodo_j] += masa_miembro
-        # Sumar la masa total de la estructura
+        
         masa_estructura += masa_miembro * 2
 
     print("Masa total de la estructura:", masa_estructura)
