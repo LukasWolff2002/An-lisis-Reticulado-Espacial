@@ -3,7 +3,7 @@ import numpy as np
 import openseespy.opensees as ops
 import pyvista as pv
 import h5py
-import os
+
 
 # Declaración de variables globales
 nodo_actual, barra_actual = 0, 0
