@@ -2,14 +2,16 @@ import numpy as np
 import pyvista as pv
 import openseespy.opensees as ops
 #PARÁMETROS DE ENTRADA
-limite1= 20 #Que tan largo desde la caja es la estructura
-limite2= 36 #Que tan ancha es la estructura
+limite1= 36 #Que tan largo desde la caja es la estructura
+limite2= 28 #Que tan ancha es la estructura
 
 gamma_fibra_carbono = 1.91 * 1000
 E_fibra_carbono = 338e9
 gamma_panel = 1.1
-D1, D2 = 0.015, 0.0001
+D1, D2 = 0.0128, 0.0001
 A =np.pi*(D1**2-D2**2)/4
+D1, D2 = 0.008, 0.0001
+A1 =np.pi*(D1**2-D2**2)/4
 
 ops.wipe()  
 ops.model('basic', '-ndm', 3, '-ndf', 3)
@@ -167,24 +169,19 @@ def trusselatorder(limite1, limite2, nodos_totales, members, nodos_paneles_solar
             [-L1, L2, L0 + i * paso],
             [0, -L2, L0 + i * paso] #añado el último
         ]
-        if i==1:
-            mbr = np.array([
+        
+        mbr = np.array([
                 [m, m + 1], [m + 1, m + 2], [m + 2, m],  # Cierra el triángulo
                 [m, m - 3], [m + 1, m - 2], [m + 2, m - 1],  # Conecta con el triángulo anterior
                 [m, m - 1], [m , m - 2], [m + 1, m - 1], [m+1,m-3], [m+2, m-3],[m+2,m-2]  # Conecta en diagonal
                  
-            ])
-        else:
-            mbr = np.array([
-            [m, m + 1], [m + 1, m + 2], [m + 2, m],  # Cierra el triángulo
-            [m, m - 3], [m + 1, m - 2], [m + 2, m - 1],  # Conecta con el triángulo anterior
-            [m, m - 1], [m + 1, m - 3], [m + 2, m - 2]  # Conecta en diagonal
         ])
+
         nodos_totales = np.vstack((nodos_totales, a))
         members = np.vstack((members, mbr))
         m += 3  # Incrementa el contador de nodos
-    nodos_paneles_solares[0].append(a[2])
-    nodos_paneles_solares[1].append(a[2])
+    # nodos_paneles_solares[0].append(a[2])
+    # nodos_paneles_solares[1].append(a[2])
     a=np.array([[0, 0, L0 + (i+1)*paso]])
     nodos_totales = np.vstack((nodos_totales, a))
     members = np.vstack((members, [[m, m-3], [m, m-2], [m, m-1]]))
@@ -245,24 +242,19 @@ def trusselatorizq(limite1, limite2, nodos_totales, members, nodos_paneles_solar
             [-L1, L2, -L0 - i * paso],
             [0, -L2, -L0 - i * paso]
         ]
-        if i==1:
-            mbr = np.array([
+
+        mbr = np.array([
                 [m, m + 1], [m + 1, m + 2], [m + 2, m],  # Cierra el triángulo
                 [m, m - 3], [m + 1, m - 2], [m + 2, m - 1],  # Conecta con el triángulo anterior
                 [m, m - 1], [m , m - 2], [m + 1, m - 1], [m+1,m-3], [m+2, m-3],[m+2,m-2]  # Conecta en diagonal
                  
-            ])
-        else:
-            mbr = np.array([
-            [m, m + 1], [m + 1, m + 2], [m + 2, m],  # Cierra el triángulo
-            [m, m - 3], [m + 1, m - 2], [m + 2, m - 1],  # Conecta con el triángulo anterior
-            [m, m - 1], [m + 1, m - 3], [m + 2, m - 2]  # Conecta en diagonal
         ])
+
         nodos_totales = np.vstack((nodos_totales, a))
         members = np.vstack((members, mbr))
         m += 3  # Incrementa el contador de nodos
-    nodos_paneles_solares[0].append(a[2])
-    nodos_paneles_solares[1].append(a[2])
+    # nodos_paneles_solares[0].append(a[2])
+    # nodos_paneles_solares[1].append(a[2])
     a=np.array([[0, 0, -L0 - (i+1)*paso]])
     nodos_totales = np.vstack((nodos_totales, a))
     members = np.vstack((members, [[m, m-3], [m, m-2], [m, m-1]]))
@@ -314,8 +306,8 @@ def trusselatorizq(limite1, limite2, nodos_totales, members, nodos_paneles_solar
    
     return nodos_totales, members, nodos_paneles_solares
 L0 = 1.3
-L1 = 2.5
-L2 = 3
+L1 = 3.2
+L2 = 3.8
 
 
 apoyos_der = np.array([
