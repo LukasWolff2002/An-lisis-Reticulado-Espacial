@@ -16,8 +16,10 @@ D1_Rope, D2_Rope, A_Rope = 0.01, 0.0005, None
 D1_Small, D2_Small, A_Small = 0.05, 0.045, None
 D1_Medium, D2_Medium, A_Medium = 0.008, 0.004, None
 D1_Large, D2_Large, A_Large = 0.010, 0.006, None
-ancho_barras, alto_barras, largo_inicial_barras = 0.5, 6, 6
-largo_barras, espaciamiento = 120, 12
+
+ancho_barras, alto_barras, largo_inicial_barras = 1, 2, 20
+largo_barras, espaciamiento = 12, 6
+
 alpha_1, alpha_2, alpha_3, alpha_4, alpha_5, alpha_6, alpha_7, alpha_8 = 0, 0, 0, 0, 0, 0,0, 0
 nodos_barra_1, nodos_barra_2, nodos_barra_3, nodos_barra_4, nodos_barra_5, nodos_barra_6, nodos_barra_7, nodos_barra_8 = [], [], [], [], [], [], [], []
 barras = []
@@ -468,7 +470,7 @@ def main():
 
 
     #--------------------------------------------
-    #Genero la torre 
+    #Genero la torre
     #--------------------------------------------
 
     nodos_base_torre_1 = np.array([
