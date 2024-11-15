@@ -452,16 +452,20 @@ for i, freq in enumerate(frecuencias, start=1):
 
 paneles_nodos = []
 
+# Obtener todos los nodos del modelo
+nodes = ops.getNodeTags()
+nodes_coords = {node: np.array(ops.nodeCoord(node)) for node in nodes}  # Diccionario de nodos y sus coordenadas
+
+# Recorrer los paneles y encontrar los nodos correspondientes
+tolerance = 1e-6  # Tolerancia para comparación
 for panel in paneles:
-        panel_nodos = []
-        for coordenada in panel:
-            # Buscar la coordenada en nodos_totales y obtener su índice
-            nodo_index = np.where((nodos_totales == coordenada).all(axis=1))[0]
-            if nodo_index.size > 0:
-                panel_nodos.append(int(nodo_index[0]))  # Guardar el índice del nodo
-            else:
-                raise ValueError(f"Coordenada {coordenada} no encontrada en nodos_totales.")
-        paneles_nodos.append(panel_nodos)
+    panel_nodos = []
+    for coord in panel:  # Coordenadas de los puntos del panel
+        for node, node_coords in nodes_coords.items():  # Comparar con las coordenadas de los nodos
+            if np.linalg.norm(node_coords - np.array(coord)) < tolerance:
+                panel_nodos.append(node)  # Añadir el nodo correspondiente
+                break
+    paneles_nodos.append(panel_nodos)
 
 #---------------------------------------------------------------------------------------------------------EJECUCIÓN DEL MODELO
 plotter = pv.Plotter()
@@ -486,8 +490,8 @@ for member in members:
 plot_paneles_solares(plotter, nodos_paneles_solares1, nodos_paneles_solares2)
 
 # Agregar etiquetas a todos los nodos
-# for idx, nodo in enumerate(nodos_totales):
-#     plotter.add_point_labels([nodo], [f"{idx+1}"], font_size=10, text_color="blue")
+for idx, nodo in enumerate(nodos_totales):
+    plotter.add_point_labels([nodo], [f"{idx+1}"], font_size=10, text_color="blue")
 
 
 
