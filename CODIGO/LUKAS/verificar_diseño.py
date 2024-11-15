@@ -3,11 +3,14 @@ import numpy as np
 import openseespy.opensees as ops
 import pyvista as pv
 import h5py
+import sys
 
-print('Revisando el diseño en modelo.h5 \n')
+file = sys.argv[1]
+
+print(f'Revisando el diseño en {file} \n')
 
 # Cargar los datos desde el archivo HDF5
-f = h5py.File('Caja_bernardo.h5', 'r')
+f = h5py.File(file, 'r')
 
 nodes_tags = f['nodes_tags'][()]
 nodes_xyz = f['nodes_xyz'][()]
@@ -26,6 +29,21 @@ for elemenot in nodes_fixities:
         nodos_fijos += 1
         
 nodos_apoyos = nodes_tags[8:nodos_fijos]
+a = 0
+for nodo in nodos_apoyos:
+    
+    coordenada = nodes_xyz[nodo-1]
+    
+    if abs(coordenada[0]) > 3.9 or abs(coordenada[1]) > 3.3 or abs(coordenada[2]) > 1.3:
+        a = 1
+
+if a != 0:
+    print('Cumple soportes \t: False \n')
+
+else:
+    print('Cumple soportes \t: True \n')
+    
+
 
 
 # Asegurarse de que nodes_tags sean enteros
@@ -71,7 +89,6 @@ for i, tag in enumerate(nodes_tags):
         # Si hay restricciones para este nodo
         fixity = fixity_rows[0][1:]  # [fx, fy, fz]
         fixity = [int(f) for f in fixity]  # Asegurar que son enteros
-        print('restinjo el nodo', tag, fixity)
         ops.fix(int(tag), *fixity)
     else:
         # Si no hay restricciones, dejar el nodo libre
@@ -109,8 +126,6 @@ for i in range(len(elements_tags)):
     masa_nodal[nodo_i] += masa_barra / 2
     masa_nodal[nodo_j] += masa_barra / 2
 
-print(f'Masa total barras \t: {masa_total_barras:.2f} kg')
-
 # Masa de los paneles
 gamma_panel = 1.1  # kg/m²
 area_panel_total = 0
@@ -144,6 +159,169 @@ else:
     print('Suficiente area \t: True \n')
 
 print(f'Masa total panel \t: {masa_total_panel:.2f} kg')
+print(f'Masa total estructura \t: {masa_total_barras:.2f} kg')
+
+import numpy as np
+
+def calcular_masa_centroide_paneles(panel_nodes, nodes_tags, nodes_xyz, gamma_panel):
+    """
+    Calcula la masa y el centroide (x, y, z) de cada panel.
+
+    Parámetros:
+        panel_nodes (list of list of int): Lista de paneles, cada uno definido por los tags de sus nodos [nodo1, nodo2, nodo3].
+        nodes_tags (array-like of int): Lista o array de tags de nodos.
+        nodes_xyz (array-like of list/tuple of float): Lista o array de coordenadas de nodos [x, y, z], alineadas con nodes_tags.
+        gamma_panel (float): Densidad superficial (kg/m²) de los paneles.
+
+    Retorna:
+        list of dict: Lista donde cada diccionario contiene 'panel_id', 'masa', y 'centroide' del panel.
+    """
+    # Convertir nodes_tags y nodes_xyz a arrays de NumPy para facilitar la indexación
+    nodes_tags = np.array(nodes_tags)
+    nodes_xyz = np.array(nodes_xyz)
+
+    panel_info = []  # Lista para almacenar la información de cada panel
+
+    for i, panel in enumerate(panel_nodes):
+        try:
+            # Verificar que el panel tiene exactamente 3 nodos (triangular)
+            if len(panel) != 3:
+                print(f"Panel {i+1} no tiene exactamente 3 nodos. Saltando.")
+                continue
+
+            # Obtener los tags de los nodos del panel
+            nodo1, nodo2, nodo3 = panel
+
+            # Encontrar los índices de los nodos en nodes_tags
+            idx1 = np.where(nodes_tags == nodo1)[0]
+            idx2 = np.where(nodes_tags == nodo2)[0]
+            idx3 = np.where(nodes_tags == nodo3)[0]
+
+            # Verificar que los nodos existen
+            if len(idx1) == 0 or len(idx2) == 0 or len(idx3) == 0:
+                print(f"Uno o más nodos del panel {i+1} no existen. Saltando.")
+                continue
+
+            idx1 = idx1[0]
+            idx2 = idx2[0]
+            idx3 = idx3[0]
+
+            # Obtener las coordenadas de los nodos
+            A = nodes_xyz[idx1]
+            B = nodes_xyz[idx2]
+            C = nodes_xyz[idx3]
+
+            # Calcular el centroide del panel
+            centroide = (A + B + C) / 3
+
+            # Calcular el área del triángulo utilizando el producto cruz
+            AB = B - A
+            AC = C - A
+            area = 0.5 * np.linalg.norm(np.cross(AB, AC))
+
+            # Calcular la masa del panel
+            masa = area * gamma_panel
+
+            # Almacenar la información en un diccionario
+            panel_info.append({
+                'panel_id': i+1,             # Identificador del panel (puedes modificarlo según tus necesidades)
+                'masa': masa,                 # Masa del panel en kg
+                'centroide': tuple(centroide)  # Coordenadas del centroide (x, y, z)
+            })
+
+        except Exception as e:
+            print(f"Error al procesar el panel {i+1}: {e}")
+
+    I_paneles = 0
+
+    for panel in panel_info:
+        I_paneles +=(panel['masa']/3)*((panel['centroide'][0]**2)+(panel['centroide'][1]**2)+(panel['centroide'][2]**2))
+
+
+    return I_paneles
+
+I_paneles = calcular_masa_centroide_paneles(panel_nodes, nodes_tags, nodes_xyz, 1.1)
+
+def calcular_masa_centroide_barras(elements_tags, elements_connectivities, nodes_tags, nodes_xyz, section_areas, gamma_fibra_carbono):
+    """
+    Calcula la masa y el centroide (x, y, z) de cada barra.
+
+    Parámetros:
+        elements_tags (array-like of int): Lista de identificadores de las barras.
+        elements_connectivities (array-like of list of int): Conectividades de las barras [[nodo_i, nodo_j], ...].
+        nodes_tags (array-like of int): Lista de tags de nodos.
+        nodes_xyz (array-like of list of float): Lista de coordenadas de nodos [x, y, z].
+        section_areas (dict): Diccionario donde las claves son IDs de barras y los valores son áreas de sección (m²).
+        gamma_fibra_carbono (float): Densidad de la fibra de carbono (kg/m³).
+
+    Retorna:
+        list of dict: Lista donde cada diccionario contiene 'barra_id', 'masa', y 'centroide' de cada barra.
+    """
+    # Convertir arrays a NumPy para facilitar la indexación
+    nodes_tags = np.array(nodes_tags)
+    nodes_xyz = np.array(nodes_xyz)
+
+    barras_info = []  # Lista para almacenar la información de cada barra
+
+    for i, barra_id in enumerate(elements_tags):
+        try:
+            # Obtener los nodos que conectan la barra
+            nodo_i, nodo_j = elements_connectivities[i]
+
+            # Encontrar los índices de los nodos en nodes_tags
+            idx_i = np.where(nodes_tags == nodo_i)[0]
+            idx_j = np.where(nodes_tags == nodo_j)[0]
+
+            # Verificar que los nodos existen
+            if len(idx_i) == 0 or len(idx_j) == 0:
+                print(f"Nodo faltante en la barra {barra_id}. Saltando.")
+                continue
+
+            idx_i = idx_i[0]
+            idx_j = idx_j[0]
+
+            # Obtener las coordenadas de los nodos
+            coord_i = nodes_xyz[idx_i]
+            coord_j = nodes_xyz[idx_j]
+
+            # Calcular la longitud de la barra
+            longitud = np.linalg.norm(coord_j - coord_i)
+
+            # Obtener el área de la sección transversal
+            area = section_areas.get(barra_id)
+            if area is None:
+                raise ValueError(f"Área no encontrada para la barra {barra_id}")
+
+            # Calcular el volumen de la barra
+            volumen = area * longitud
+
+            # Calcular la masa de la barra
+            masa = volumen * gamma_fibra_carbono
+
+            # Calcular el centroide de la barra (promedio de las coordenadas de los nodos)
+            centroide = (coord_i + coord_j) / 2
+
+            # Almacenar la información en un diccionario
+            barras_info.append({
+                'barra_id': barra_id,          # Identificador de la barra
+                'masa': masa,                  # Masa de la barra en kg
+                'centroide': tuple(centroide)  # Coordenadas del centroide (x, y, z)
+            })
+
+        except Exception as e:
+            print(f"Error al procesar la barra {barra_id}: {e}")
+
+    I_barras = 0
+    for barra in barras_info:
+        I_barras +=(barra['masa']/3)*((barra['centroide'][0]**2)+(barra['centroide'][1]**2)+(barra['centroide'][2]**2))
+        
+
+    return I_barras
+
+I_barras = calcular_masa_centroide_barras(elements_tags, elements_connectivities, nodes_tags, nodes_xyz, section_areas, gamma_fibra_carbono)
+
+print(f'Iner total panel \t: {I_paneles} kg*m2')
+print(f'Iner total estructura \t: {I_barras} kg*m2')
 
 RME = (masa_total_barras / masa_total_panel) * 100
 print(f'RME \t\t\t: {RME:.2f}%')
