@@ -2,6 +2,7 @@
 import numpy as np
 import openseespy.opensees as ops
 import pyvista as pv
+import h5py
 
 # Declaración de variables globales
 nodo_actual, barra_actual = 0, 0
@@ -15,25 +16,26 @@ FS = 2                                # Factor de seguridad
 D1_Rope, D2_Rope = 0.004, 0.000
 D1_ExtraS, D2_ExtraS = 0.022, 0.021   # Nueva sección ExtraS
 D1_Small, D2_Small = 0.03, 0.024
-D1_Medium, D2_Medium = 0.04, 0.0354
-D1_Large, D2_Large = 0.05, 0.045
-D1_ExtraL, D2_ExtraL = 0.06, 0.055    # Nueva sección ExtraL
+D1_Medium, D2_Medium = 0.036, 0.032
+D1_Large, D2_Large = 0.04, 0.037
+D1_ExtraL, D2_ExtraL = 0.041, 0.03   # Nueva sección ExtraL
 A_Rope, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL = None, None, None, None, None, None
 I_Rope, I_ExtraS, I_Small, I_Medium, I_Large, I_ExtraL = None, None, None, None, None, None
 
 # Parámetros geométricos
 ancho_barras = 2
-alto_barras = 3.9
+alto_barras = 3
 largo_inicial_barras = 7
 largo_barras = 33.96
 espaciamiento = 5.66
-delta_alto = 0.3
-delta_ancho = 0.2
+delta_alto = 0.15
+delta_ancho = 0.3
 
 # Listas y diccionarios globales
 conexiones_paneles = []
 masa_acumulada_por_nodo = {}
 barras = []
+nodos_fijos = []
 
 # Variación Térmica
 alpha_T = -0.5e-6  # Coeficiente de expansión térmica (1/°C)
@@ -80,11 +82,12 @@ def calcular_nuevo_punto_transversal(angulo_xy, largo, distancia_transversal):
 # Funciones para definir nodos y elementos
 def definir_nodos_fijos(nodes):
     """Define nodos fijos en el modelo."""
-    global nodo_actual
+    global nodo_actual, nodos_fijos
     for n in nodes:
         nodo_actual += 1
         ops.node(nodo_actual, float(n[0]), float(n[1]), float(n[2]))
         ops.fix(nodo_actual, 1, 1, 1)
+        nodos_fijos.append([nodo_actual, 1, 1, 1])
 
 def generar_elemento_axial(nodo_1, nodo_2, Tamaño):
     """Genera un elemento axial (barra) entre dos nodos."""
@@ -106,11 +109,12 @@ def generar_elemento_axial(nodo_1, nodo_2, Tamaño):
 # Funciones para definir apoyos y nodos base
 def nodos_apoyos(nodos_apoyo, nodos_barra):
     """Define los nodos de apoyo y los agrega a la lista de nodos de la barra."""
-    global nodo_actual
+    global nodo_actual, nodos_fijos
     for n in nodos_apoyo:
         nodo_actual += 1
         ops.node(nodo_actual, float(n[0]), float(n[1]), float(n[2]))
         ops.fix(nodo_actual, 1, 1, 1)
+        nodos_fijos.append([nodo_actual, 1, 1, 1])
     nodos_barra.append([nodo_actual - 2, nodo_actual - 1, nodo_actual])
 
 def nodos_base_barras(nodos_iniciales_barra, nodos_barra, alpha):
@@ -129,12 +133,12 @@ def nodos_base_barras(nodos_iniciales_barra, nodos_barra, alpha):
     for i in range(len(nodos_barra[-1])):
         j = (i + 1) % len(nodos_barra[-1])
         if i == 1:
-            generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'XS')
+            generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'S')
         else:
-            generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'M')  # Usamos 'XS' para la base
+            generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'L')  # Usamos 'XS' para la base
         
     if len(nodos_barra) > 1:
-        conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'M', 'L')
+        conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'XL', 'L', 'XL', 'L')
 
 # Funciones para conectar capas y alargar barras
 def conectar_capas(nodos_capa_1, nodos_capa_2, Tamaño_Longitudinal, Tamaño_diagonal, Tamaño_Longitudinal_Sup=None, Diagonal_especial_1=None, Diagonal_especial_2=None):
@@ -177,7 +181,7 @@ def conectar_capas(nodos_capa_1, nodos_capa_2, Tamaño_Longitudinal, Tamaño_dia
                 barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[idx], Diagonal_especial_1])
                 barra_actual += 1
 
-            if Diagonal_especial_2 is not None and idx == 0:
+            elif Diagonal_especial_2 is not None and idx == 0:
                 ops.element('Truss', barra_actual, nodos_capa_1[i], nodos_capa_2[idx], area_diagonal_2, 1, '-rho', gamma_fibra_carbono)
                 barras.append([barra_actual, nodos_capa_1[i], nodos_capa_2[idx], Diagonal_especial_2])
                 barra_actual += 1
@@ -215,7 +219,9 @@ def alargar_barras(alpha, nodos_barra):
                 generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'XS')
         # Conectar capas según la posición
         if a == 0:
-            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'L', 'M')
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'M', 'XL', 'L', 'L')
+        elif a == 1:
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'M', None, 'L')
         elif a < (num_segmentos / 2):
             conectar_capas(nodos_barra[-2], nodos_barra[-1], 'L', 'M', None, 'M')
         elif a < (3 * num_segmentos / 4):
@@ -303,7 +309,7 @@ def realizar_analisis_frecuencias(num_modes):
     """Realiza un análisis modal y retorna las frecuencias naturales."""
     eigenvalues = ops.eigen(num_modes)
     eigenfrequencies = np.sqrt(eigenvalues) / (2 * np.pi)
-    print(f'\nLa frecuencia natural más baja es: {eigenfrequencies[0]} Hz\n')
+    print(f'La frecuencia natural más baja es: {eigenfrequencies[0]} Hz\n')
     return eigenfrequencies
 
 def realizar_analisis_inercial(aceleraciones):
@@ -652,7 +658,7 @@ def revisar_falla_barras (barras, fuerzas_maximas):
 
         
         if pandeo > E_fibra_carbono:
-            raise ValueError(f"La barra {i}, que conecta los nodos {barras[i][1],barras[i][2]} ha fallado por pandeo, con un valor de {pandeo/10e8} GPa")
+            raise ValueError(f"La barra {i}, que conecta los nodos {barras[i][1],barras[i][2]} seccion {barras[i][3]} ha fallado por pandeo, con un valor de {pandeo/10e8} GPa")
 
         FU = pandeo/E_fibra_carbono
         
@@ -722,6 +728,54 @@ def visualizar_factor_utilizacion(barras, facotres_utilizacion):
 
     plotter.show_axes()
     plotter.show()
+
+def exportar_hf5 ():
+    global nodos_fijos
+    #NEsecito entregar un array con las coordenadas nodes_xyz
+    #Otro array con los numeros de nodos nodes_tags
+    #Otro array con los numeros de los element elements_tags
+    #Otro array elements_section_info
+    #otro array elements_connectivities
+
+    nodes = (ops.getNodeTags())
+    nodes_tags = np.array(nodes)
+    nodes_xyz = np.array([ops.nodeCoord(tag) for tag in nodes])
+    nodes_fixities = np.array(nodos_fijos)
+    
+    elements_tags = ([i for i in range(1, len(barras)+1)])
+    elements_connectivities = np.array([[barras[i][1], barras[i][2]] for i in range(len(barras))])
+
+    elements_section_info = []
+    for element in barras:
+        if element[3] == 'Rope':
+            elements_section_info.append([D2_Rope, (D1_Rope-D2_Rope)/2])
+        elif element[3] == 'XS':
+            elements_section_info.append([D2_ExtraS, (D1_ExtraS-D2_ExtraS)/2])
+        elif element[3] == 'S':
+            elements_section_info.append([D2_Small, (D1_Small-D2_Small)/2])
+        elif element[3] == 'M':
+            elements_section_info.append([D2_Medium, (D1_Medium-D2_Medium)/2])
+        elif element[3] == 'L':
+            elements_section_info.append([D2_Large, (D1_Large-D2_Large)/2])
+        elif element[3] == 'XL':
+            elements_section_info.append([D2_ExtraL, (D1_ExtraL-D2_ExtraL)/2])
+
+    elements_section_info = np.array(elements_section_info)
+
+    panel_nodes = np.array(conexiones_paneles)
+
+    #AHora lo guardo en el archivo
+    hf5 = h5py.File('CajaSatelite.h5', 'w')
+
+    hf5['nodes_tags'] = nodes_tags
+    hf5['nodes_xyz'] = nodes_xyz
+    hf5['nodes_fixities'] = nodes_fixities
+    hf5['elements_tags'] = elements_tags
+    hf5['elements_connectivities'] = elements_connectivities
+    hf5['elements_section_info'] = elements_section_info
+    hf5['panel_nodes'] = panel_nodes
+
+    hf5.close()
 
 # Función principal
 def main():
@@ -798,19 +852,22 @@ def main():
     conexiones_paneles.append([nodos_barras[2][1][0], nodos_barras[3][1][0], nodos_barras[0][1][0]])
 
     # Visualizar la estructura
-    visualizar_caja_satelite(caras_caja, barras, conexiones_paneles)
+    #visualizar_caja_satelite(caras_caja, barras, conexiones_paneles)
 
     # Acumular masas y asignar masas a los nodos
     acumular_masa_barras_en_nodos()
     masa_barras = sum(masa_acumulada_por_nodo.values())
     area_paneles, masa_paneles = acumular_masa_paneles()
-    print(f'Los paneles tienen un área total de {area_paneles} y una masa total de {masa_paneles}')
+    print(f'Los paneles tienen un área total de {area_paneles} y una masa total de {masa_paneles} \n')
     if area_paneles < 3333.333333:
         raise ValueError("El área total de los paneles no es suficiente.")
 
-    print(f'La masa total de las barras es: {masa_barras}')
-    print(f'La proporción es: {masa_barras / masa_paneles}')
+    print(f'La masa total de las barras es: {masa_barras} \n')
+    print(f'La proporción es: {(masa_barras / masa_paneles)*100} %\n')
     asignar_masas_a_nodos()
+
+    # Exportar a HDF5
+    exportar_hf5()
 
     # Realizar análisis de frecuencias
     eigenfrequencies = realizar_analisis_frecuencias(num_modes=10)
@@ -824,22 +881,31 @@ def main():
     ]
     fuerzas_maximas = realizar_analisis_inercial(aceleraciones)
 
+    print(f'La fuerza maxima experimentada por inercia es de {(max(fuerzas_maximas.values()))/1000} kN \n')
+
     #graficar_mapa_calor_inercia(barras, fuerzas_maximas)
             
-    factores_utilizacion = revisar_falla_barras(barras, fuerzas_maximas)
-    visualizar_factor_utilizacion(barras, factores_utilizacion)
+    #factores_utilizacion = revisar_falla_barras(barras, fuerzas_maximas)
+    #visualizar_factor_utilizacion(barras, factores_utilizacion)
 
     # Análisis Térmico
     realizar_analisis_termico()
 
     # Verificar ángulos entre vectores normales de los paneles
     lista_normal_inicial, lista_normal_final = calcular_vectores_normales_paneles(conexiones_paneles)
+    angulo_max = 0
     for i in range(len(lista_normal_inicial)):
         angulo = calcular_angulo_entre_vectores(lista_normal_inicial[i], lista_normal_final[i])
+        if angulo > angulo_max:
+            angulo_max = angulo
         if angulo > 2:
             raise ValueError(f"El ángulo entre los vectores normales del panel es mayor a 2 grados")
 
+    print(f'La angulacion maxima experimentada en un panel es de {angulo_max} grados')
+
     #isualizar_desplazamiento_termico(barras, conexiones_paneles, escala=1000)
+
+
 
 if __name__ == "__main__":
     main()

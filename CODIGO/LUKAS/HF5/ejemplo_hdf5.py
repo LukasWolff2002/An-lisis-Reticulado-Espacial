@@ -7,6 +7,9 @@ for i in range(3):
     A[:, i] = i
 
 print(A)
+#-------------------------------------------
+
+#open -a HDFView
 
 #hdf5 es un dato que es mas general para otras aplicaciones
 
