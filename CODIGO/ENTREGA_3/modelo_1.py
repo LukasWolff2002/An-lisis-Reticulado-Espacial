@@ -20,6 +20,7 @@ D1_Small, D2_Small = 0.033, 0.024
 D1_Medium, D2_Medium = 0.037, 0.032
 D1_Large, D2_Large = 0.041, 0.035
 D1_ExtraL, D2_ExtraL = 0.0425, 0.03   # Nueva sección ExtraL
+
 A_Rope, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL = None, None, None, None, None, None
 I_Rope, I_ExtraS, I_Small, I_Medium, I_Large, I_ExtraL = None, None, None, None, None, None
 
@@ -484,7 +485,7 @@ def visualizar_panel_3_puntos(nodos_paneles, plotter, color='green'):
             raise ValueError("Cada panel debe estar definido por exactamente 3 nodos.")
         surface = pv.PolyData(puntos_panel)
         surface.faces = np.hstack([[3], [0, 1, 2]])
-        plotter.add_mesh(surface, color=color, show_edges=True, opacity=0.3)
+        plotter.add_mesh(surface, color=color, show_edges=True, opacity=0.0)
 
 def visualizar_panel_4_puntos(nodos_paneles, plotter, color='green'):
     """Visualiza paneles definidos por cuatro puntos."""
