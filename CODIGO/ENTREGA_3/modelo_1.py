@@ -20,7 +20,6 @@ D1_Small, D2_Small = 0.033, 0.024
 D1_Medium, D2_Medium = 0.037, 0.032
 D1_Large, D2_Large = 0.041, 0.035
 D1_ExtraL, D2_ExtraL = 0.0425, 0.03   # Nueva sección ExtraL
-
 A_Rope, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL = None, None, None, None, None, None
 I_Rope, I_ExtraS, I_Small, I_Medium, I_Large, I_ExtraL = None, None, None, None, None, None
 
@@ -761,25 +760,10 @@ def exportar_hf5():
             fij_int = [int(f) for f in fij]
             nodos_fijos_int.append(fij_int)
         except ValueError as e:
-            raise ValueError(f"Error al convertir restricciones de nodo {fij}: {e}")
-    
-    # Crear un conjunto de nodos fijos para facilitar la búsqueda
-    fixed_nodes = set([fij[0] for fij in nodos_fijos_int])
-    
-    # Obtener todos los nodos
-    all_nodes = set(ops.getNodeTags())
-    
-    # Identificar nodos libres (no están en 'fixed_nodes')
-    free_nodes = all_nodes - fixed_nodes
-    
-    # Asignar [nodo, 0, 0, 0] a los nodos libres
-    nodos_libres_int = [[int(node), 0, 0, 0] for node in free_nodes]
-    
-    # Combinar nodos fijos y libres
-    nodos_fixities_combined = nodos_fijos_int + nodos_libres_int
+            raise ValueError(f"Error al convertir restricciones de nodo {fij}: {e}") 
     
     # Convertir a un arreglo NumPy
-    nodes_fixities = np.array(nodos_fixities_combined, dtype=int)
+    nodes_fixities = np.array(nodos_fijos_int, dtype=int)
     
     # Definir los tags de los elementos como enteros
     elements_tags = np.array([i for i in range(1, len(barras)+1)], dtype=int)
@@ -933,7 +917,7 @@ def main():
 
     print(f'La fuerza maxima experimentada por inercia es de {(max(fuerzas_maximas.values()))/1000} kN \n')
 
-    graficar_mapa_calor_inercia(barras, fuerzas_maximas)
+    #graficar_mapa_calor_inercia(barras, fuerzas_maximas)
             
     factores_utilizacion = revisar_falla_barras(barras, fuerzas_maximas)
     visualizar_factor_utilizacion(barras, factores_utilizacion)
@@ -953,7 +937,7 @@ def main():
 
     print(f'La angulacion maxima experimentada en un panel es de {angulo_max} grados')
 
-    visualizar_desplazamiento_termico(barras, conexiones_paneles, escala=1000)
+    #visualizar_desplazamiento_termico(barras, conexiones_paneles, escala=1000)
 
 
 
