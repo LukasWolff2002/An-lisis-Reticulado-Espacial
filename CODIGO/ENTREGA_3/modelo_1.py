@@ -14,12 +14,12 @@ fluencia_fibra_carbono = 2020e6    # Límite de fluencia de la fibra de carbono 
 FS = 2                                # Factor de seguridad
 
 # Dimensiones de las secciones de las barras
-D1_Rope, D2_Rope = 0.004, 0.000
+D1_Rope, D2_Rope = 0.015, 0.012
 D1_ExtraS, D2_ExtraS = 0.022, 0.021   # Nueva sección ExtraS
-D1_Small, D2_Small = 0.033, 0.024
+D1_Small, D2_Small = 0.033, 0.03
 D1_Medium, D2_Medium = 0.037, 0.032
 D1_Large, D2_Large = 0.041, 0.035
-D1_ExtraL, D2_ExtraL = 0.0417, 0.03   # Nueva sección ExtraL
+D1_ExtraL, D2_ExtraL = 0.0425, 0.03   # Nueva sección ExtraL
 A_Rope, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL = None, None, None, None, None, None
 I_Rope, I_ExtraS, I_Small, I_Medium, I_Large, I_ExtraL = None, None, None, None, None, None
 
@@ -29,7 +29,7 @@ alto_barras = 3
 largo_inicial_barras = 7
 largo_barras = 33.96
 espaciamiento = 5.66
-delta_alto = 0.15
+delta_alto = 0.2
 delta_ancho = 0.3
 
 # Listas y diccionarios globales
@@ -94,6 +94,7 @@ def generar_elemento_axial(nodo_1, nodo_2, Tamaño):
     """Genera un elemento axial (barra) entre dos nodos."""
     global barra_actual, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL, gamma_fibra_carbono
     area_dict = {
+        'Rope': A_Rope,
         'XS': A_ExtraS,
         'S': A_Small,
         'M': A_Medium,
@@ -146,6 +147,7 @@ def conectar_capas(nodos_capa_1, nodos_capa_2, Tamaño_Longitudinal, Tamaño_dia
     """Conecta dos capas de nodos con elementos longitudinales y diagonales."""
     global barra_actual, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL, gamma_fibra_carbono
     area_dict = {
+        'Rope': A_Rope,
         'XS': A_ExtraS,
         'S': A_Small,
         'M': A_Medium,
@@ -213,23 +215,40 @@ def alargar_barras(alpha, nodos_barra):
         # Generar elementos axiales (Construir los triangulos)
         for i in range(len(nodos_barra[-1])):
             j = (i + 1) % len(nodos_barra[-1])
-            if a < (num_segmentos / 2):
-
+            if a == 0:
                 generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'S')
-            else:
+
+            elif a == 1:
+                generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'S')
+
+            elif a == 2:
                 generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'XS')
+
+            elif a == 3:
+                generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'XS')
+
+            elif a == 4:
+                generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'Rope')
+
+            elif a == 5:
+                generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'Rope')
+
+            
         # Conectar capas según la posición
         if a == 0:
             conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'M', None, 'L', 'L')
         elif a == 1:
             conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'M', None, 'L')
-        elif a < (num_segmentos / 2):
+        elif a == 2:
             conectar_capas(nodos_barra[-2], nodos_barra[-1], 'L', 'M')
-        elif a < (3 * num_segmentos / 4):
-            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'M', 'M', None, None, 'S')
 
-        else:
-            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'S', 'XS', 'M', 'S', 'M')
+        elif a == 3:
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'L', 'S', None, 'S', 'M')
+        elif a ==4:
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'M', 'S', None,  'S', 'M')
+
+        elif a == 5:
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'Rope', 'S', 'S', 'S', 'M')
 
 # Funciones para definir paneles y calcular áreas
 def nodos_paneles(nodos_barra_A, nodos_barra_B):

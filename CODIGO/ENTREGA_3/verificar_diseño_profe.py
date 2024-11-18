@@ -310,6 +310,7 @@ for e, nodos, props in zip(elements_tags, elements_connectivities, elements_sect
 
     check_pandeo_this = FS*F[e] < Pcr
     if not check_pandeo_this:
+
         check_pandeo = False
 
     # check resistencia
