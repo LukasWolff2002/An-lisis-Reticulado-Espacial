@@ -19,7 +19,7 @@ D1_ExtraS, D2_ExtraS = 0.022, 0.021   # Nueva sección ExtraS
 D1_Small, D2_Small = 0.033, 0.024
 D1_Medium, D2_Medium = 0.037, 0.032
 D1_Large, D2_Large = 0.041, 0.035
-D1_ExtraL, D2_ExtraL = 0.0425, 0.03   # Nueva sección ExtraL
+D1_ExtraL, D2_ExtraL = 0.0417, 0.03   # Nueva sección ExtraL
 A_Rope, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL = None, None, None, None, None, None
 I_Rope, I_ExtraS, I_Small, I_Medium, I_Large, I_ExtraL = None, None, None, None, None, None
 
@@ -30,7 +30,7 @@ largo_inicial_barras = 7
 largo_barras = 33.96
 espaciamiento = 5.66
 delta_alto = 0.15
-delta_ancho = -0.3
+delta_ancho = 0.3
 
 # Listas y diccionarios globales
 conexiones_paneles = []
