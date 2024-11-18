@@ -1,6 +1,7 @@
 #!/bin//bash
 import sys
-import openseespy.opensees as ops   #es distinto para ustedesimport numpy as np
+sys.path.append("/home/jaabell/Repositories/OpenSees-ASDPlastic/build")
+import openseespy.opensees as ops  #es distinto para ustedesimport numpy as np
 import numpy as np
 import h5py
 
@@ -54,7 +55,7 @@ print(f"Revisando el diseño en {fname}")
 print("")
 
 #Leer modelo
-f = h5py.File("CODIGO/ENTREGA_3/propuesta1.h5")
+f = h5py.File(fname)
 
 nodes_tags = f["nodes_tags"][()]
 nodes_xyz = f["nodes_xyz"][()]
@@ -81,9 +82,28 @@ check_fixities = True
 for fixity in nodes_fixities:
     n = fixity[0]
     x = nodes_dict[n][0]
-    check_fixities &= abs(x[0] - Lx/2) <= tol
-    check_fixities &= abs(x[1] - Ly/2) <= tol
-    check_fixities &= abs(x[2] - Lz/2) <= tol
+    # check_fixities &= abs(x[0] - Lx/2) <= tol
+    # check_fixities &= abs(x[1] - Ly/2) <= tol
+    # check_fixities &= abs(x[2] - Lz/2) <= tol
+
+    if abs(x[0])-Lx/2 <= tol:
+        if abs(x[1]) <= Ly/2 and abs(x[2]) <= Lz/2:
+            pass
+        else:
+            check_fixities = False
+            break
+    if abs(x[1])-Ly/2 <= tol:
+        if abs(x[0]) <= Lx/2 and abs(x[2]) <= Lz/2:
+            pass
+        else:
+            check_fixities = False
+            break
+    if abs(x[2])-Lz/2 <= tol:
+        if abs(x[0]) <= Lx/2 and abs(x[1]) <= Ly/2:
+            pass
+        else:
+            check_fixities = False
+            break
 
 print(f"Cumple soportes       : {check_fixities}")
 print("")
@@ -131,9 +151,9 @@ print("")
 m_total_estructura = 0.
 inercia_total_estructura = 0.
 for e, nodos, props in zip(elements_tags, elements_connectivities, elements_section_info):
-    D_ext = props[0]
+    Dint = props[0]
     t = props[1]
-    A = np.pi * ((D_ext/2)**2 -  (D_ext/2 - t)**2)
+    A = np.pi * ((Dint/2 + t)**2 - (Dint/2)**2 )
     ρ_lin = A * ρ_compuesto
     x0 = nodes_dict[nodos[0]][0]
     x1 = nodes_dict[nodos[1]][0]
@@ -178,9 +198,9 @@ def setup_model():
     m_total_estructura = 0.
 
     for e, nodos, props in zip(elements_tags, elements_connectivities, elements_section_info):
-        D_ext = props[0]
+        Dint = props[0]
         t = props[1]
-        A = np.pi * ((D_ext/2)**2 -  (D_ext/2 - t)**2)
+        A = np.pi * ((Dint/2 + t)**2 - (Dint/2)**2 )
         ρ_lin = A * ρ_compuesto
 
 
@@ -271,10 +291,10 @@ check_pandeo = True
 FU_min = np.inf
 FU_max = -np.inf
 for e, nodos, props in zip(elements_tags, elements_connectivities, elements_section_info):
-    D_ext = props[0]
+    Dint = props[0]
     t = props[1]
-    A = np.pi * ((D_ext/2)**2 -  (D_ext/2 - t)**2)
-    I = np.pi * ((D_ext/2)**4 -  (D_ext/2 - t)**4)
+    A = np.pi * ((Dint/2 + t)**2 - (Dint/2)**2 )
+    I = np.pi * ((Dint/2 + t)**4 - (Dint/2)**4 )
 
     f = F[e]
 
@@ -285,14 +305,22 @@ for e, nodos, props in zip(elements_tags, elements_connectivities, elements_sect
     # check_pandeo
     Pcr = np.pi**2 * E_compuesto * I / (L**2)
 
-    if FS*F[e] > Pcr:
+    check_resistencia = True
+    check_pandeo = True
+
+    check_pandeo_this = FS*F[e] < Pcr
+    if not check_pandeo_this:
         check_pandeo = False
 
     # check resistencia
     F_ultimate = σ_max_compuesto * A
+    check_resistencia_this = FS*F[e] < F_ultimate
 
-    if FS*F[e] > F_ultimate:
+    if not check_resistencia_this:
         check_resistencia = False
+
+
+    # print(f"{e = } {FS*F[e]= } {Pcr=} {F_ultimate=} {check_pandeo_this=} {check_resistencia_this=}")
 
 
     FU = FS * F[e] / F_ultimate
