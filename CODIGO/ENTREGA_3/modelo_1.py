@@ -7,7 +7,7 @@ import h5py
 
 # Declaración de variables globales
 nodo_actual, barra_actual = 0, 0
-gamma_fibra_carbono = 1.91 * 1000     # Densidad de la fibra de carbono (kg/m³)
+gamma_fibra_carbono = 1.2 * 1000     # Densidad de la fibra de carbono (kg/m³)
 E_fibra_carbono = 338e9               # Módulo de Young de la fibra de carbono (Pa)
 gamma_panel = 1.1                     # Densidad del panel (kg/m²)
 fluencia_fibra_carbono = 2020e6    # Límite de fluencia de la fibra de carbono (Pa)
@@ -30,7 +30,7 @@ largo_inicial_barras = 7
 largo_barras = 33.96
 espaciamiento = 5.66
 delta_alto = 0.15
-delta_ancho = 0.3
+delta_ancho = -0.3
 
 # Listas y diccionarios globales
 conexiones_paneles = []
@@ -210,7 +210,7 @@ def alargar_barras(alpha, nodos_barra):
         nodo_actual += 1
         ops.node(nodo_actual, x_2, y_2, z - (alto_barras / 2) + delta_a)
         nodos_barra.append([nodo_actual - 2, nodo_actual - 1, nodo_actual])
-        # Generar elementos axiales
+        # Generar elementos axiales (Construir los triangulos)
         for i in range(len(nodos_barra[-1])):
             j = (i + 1) % len(nodos_barra[-1])
             if a < (num_segmentos / 2):
@@ -220,13 +220,13 @@ def alargar_barras(alpha, nodos_barra):
                 generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'XS')
         # Conectar capas según la posición
         if a == 0:
-            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'M', 'XL', 'L', 'L')
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'M', None, 'L', 'L')
         elif a == 1:
             conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'M', None, 'L')
         elif a < (num_segmentos / 2):
-            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'L', 'M', None, 'M')
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'L', 'M')
         elif a < (3 * num_segmentos / 4):
-            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'M', 'M', None, 'M', 'S')
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'M', 'M', None, None, 'S')
 
         else:
             conectar_capas(nodos_barra[-2], nodos_barra[-1], 'S', 'XS', 'M', 'S', 'M')
