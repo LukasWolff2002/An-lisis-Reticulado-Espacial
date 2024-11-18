@@ -10,7 +10,7 @@ nodo_actual, barra_actual = 0, 0
 gamma_fibra_carbono = 1.91 * 1000     # Densidad de la fibra de carbono (kg/m³)
 E_fibra_carbono = 338e9               # Módulo de Young de la fibra de carbono (Pa)
 gamma_panel = 1.1                     # Densidad del panel (kg/m²)
-fluencia_fibra_carbono = 2.02e9       # Límite de fluencia de la fibra de carbono (Pa)
+fluencia_fibra_carbono = 2020e6    # Límite de fluencia de la fibra de carbono (Pa)
 FS = 2                                # Factor de seguridad
 
 # Dimensiones de las secciones de las barras
