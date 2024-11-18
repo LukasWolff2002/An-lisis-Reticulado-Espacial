@@ -155,7 +155,7 @@ def main():
     modelo = cargar_modelo(file_path)
     
     # Crear la malla 3D con el factor de escala
-    malla = crear_malla_3d(modelo, escala=7, radio_cilindro=0.15, color_cilindro='blue', radio_nodo=0.1, color_nodo='red')
+    malla = crear_malla_3d(modelo, escala=6, radio_cilindro=0.15, color_cilindro='blue', radio_nodo=0.1, color_nodo='red')
     
     # Visualizar la malla
     visualizar_malla(malla)
