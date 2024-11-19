@@ -19,7 +19,7 @@ D1_ExtraS, D2_ExtraS = 0.022, 0.021   # Nueva sección ExtraS
 D1_Small, D2_Small = 0.033, 0.03
 D1_Medium, D2_Medium = 0.037, 0.032
 D1_Large, D2_Large = 0.041, 0.035
-D1_ExtraL, D2_ExtraL = 0.0425, 0.03   # Nueva sección ExtraL
+D1_ExtraL, D2_ExtraL = 0.04157, 0.03   # Nueva sección ExtraL
 A_Rope, A_ExtraS, A_Small, A_Medium, A_Large, A_ExtraL = None, None, None, None, None, None
 I_Rope, I_ExtraS, I_Small, I_Medium, I_Large, I_ExtraL = None, None, None, None, None, None
 
@@ -140,7 +140,7 @@ def nodos_base_barras(nodos_iniciales_barra, nodos_barra, alpha):
             generar_elemento_axial(nodos_barra[-1][i], nodos_barra[-1][j], 'L')  # Usamos 'XS' para la base
         
     if len(nodos_barra) > 1:
-        conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'XL', 'L', 'XL', 'L')
+        conectar_capas(nodos_barra[-2], nodos_barra[-1], 'XL', 'XL', 'L', 'L', 'L')
 
 # Funciones para conectar capas y alargar barras
 def conectar_capas(nodos_capa_1, nodos_capa_2, Tamaño_Longitudinal, Tamaño_diagonal, Tamaño_Longitudinal_Sup=None, Diagonal_especial_1=None, Diagonal_especial_2=None):
@@ -248,7 +248,7 @@ def alargar_barras(alpha, nodos_barra):
             conectar_capas(nodos_barra[-2], nodos_barra[-1], 'M', 'S', None,  'S', 'M')
 
         elif a == 5:
-            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'Rope', 'S', 'S', 'S', 'M')
+            conectar_capas(nodos_barra[-2], nodos_barra[-1], 'Rope', 'S', 'S', 'XS', 'M')
 
 # Funciones para definir paneles y calcular áreas
 def nodos_paneles(nodos_barra_A, nodos_barra_B):

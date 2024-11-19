@@ -269,7 +269,7 @@ def analyze_eigen():
     # Calculate natural frequencies (Hz)
     eigenfrequencies = np.sqrt(np.abs(eigenvalues)) / (2 * np.pi)
     # print("Eigenfrequencies: ", eigenfrequencies)
-
+    prit
     ops.wipe()
 
     return eigenfrequencies[0]
